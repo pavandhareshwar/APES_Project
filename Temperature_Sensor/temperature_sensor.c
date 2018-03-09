@@ -1,28 +1,12 @@
-#include <errno.h>
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <stdint.h>
-#include <linux/i2c-dev.h>
-#include <sys/ioctl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
+/*************************************************************************
+* Author:       Pavan Dhareshwar & Sridhar Pavithrapu
+* Date:         03/07/2018
+* File:         temperature_sensor.c
+* Description:  Source file describing the functionality and implementation
+*               of temperature sensor task.
+*************************************************************************/
 
-#define I2C_SLAVE_ADDR				    0b01001000
-#define I2C_TEMP_SENSOR_TEMP_DATA_REG	0b00000000	// Temperature data register (read-only)
-#define I2C_TEMP_SENSOR_CONFIG_REG	    0b00000001	// command register
-#define I2C_TEMP_SENSOR_TLOW_REG	    0b00000010	// T_low register
-#define I2C_TEMP_SENSOR_THIGH_REG	    0b00000011	// T_high register
-
-typedef enum{
-	
-	TEMP_CELSIUS = 0,
-	TEMP_KELVIN = 1,
-	TEMP_FARENHEIT = 2
-	
-}tempformat_e;
+#include <temperature_sensor.h>
 
 
 void write_pointer_register(int file_descriptor, uint8_t value){
@@ -47,7 +31,7 @@ void write_temp_high_low_register(int file_descriptor, int sensor_register, uint
 	}
 }
 
-uint16_t read_temp_high_low_register(int sensor_register, int file_descriptor){
+uint16_t read_temp_high_low_register(int file_descriptor, int sensor_register){
 	
 	printf("In read_temp_low_register function \n");
 	
