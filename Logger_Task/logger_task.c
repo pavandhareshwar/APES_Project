@@ -20,10 +20,8 @@ int main(void)
         exit(1);
     }
 
-#if 0
-    /* This was used to test the message write functionality to the logger message queue */
     write_test_msg_to_logger();
-#endif
+
     read_from_logger_msg_queue();
 
     logger_task_exit();

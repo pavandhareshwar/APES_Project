@@ -24,6 +24,14 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+
+/*---------------------------------- GLOBALS --------------------------------*/
+int temp_fd;
+char i2c_name[10];
+
 
 /*----------------------------------- MACROS --------------------------------*/
 
@@ -33,7 +41,10 @@
 #define I2C_TEMP_SENSOR_TLOW_REG	    0b00000010	// T_low register
 #define I2C_TEMP_SENSOR_THIGH_REG	    0b00000011	// T_high register
 
+#define SERVER_PORT_NUM                 8081
+#define SERVER_LISTEN_QUEUE_SIZE        5
 
+#define MSG_BUFF_MAX_LEN                1024 
 /*---------------------------- STRUCTURES/ENUMERATIONS ----------------------*/
 
 typedef enum{
@@ -111,3 +122,4 @@ uint16_t read_temp_config_register(int file_descriptor);
 */
 float read_temperature_data_register(int file_descriptor,int format);
 
+#endif // #ifndef _TEMPERATURE_SENSOR_TASK_H_

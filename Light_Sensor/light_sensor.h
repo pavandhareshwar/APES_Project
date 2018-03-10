@@ -13,6 +13,7 @@
 #include <errno.h>
 #include <stdint.h>
 #include <string.h>
+#include <math.h>
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -22,6 +23,10 @@
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/msg.h>
+#include <sys/ipc.h>
+
+#include <mqueue.h>
 
 /*---------------------------------- INCLUDES -------------------------------*/
 
@@ -48,6 +53,12 @@
 
 #define I2C_LIGHT_SENSOR_CTRL_REG_VAL                0x3
 
+#define MSG_QUEUE_NAME                               "/logger_task_mq"
+#define MSG_QUEUE_MAX_NUM_MSGS                       5
+#define MSG_QUEUE_MAX_MSG_SIZE                       1024
+
+#define MSG_MAX_LEN                                  128
+
 /*----------------------------------- MACROS --------------------------------*/
 
 /*---------------------------------- GLOBALS --------------------------------*/
@@ -56,6 +67,18 @@ int i2c_light_sensor_fd;
 /*---------------------------------- GLOBALS --------------------------------*/
 
 /*---------------------------- STRUCTURES/ENUMERATIONS ----------------------*/
+enum _msg_type_                                                                                       
+{                                                                                                     
+    MSG_TYPE_TEMP_DATA,                                                                               
+    MSG_TYPE_LUX_DATA                                                                                 
+};                                                                                                    
+                                                                                                      
+struct _logger_msg_struct_                                                                            
+{   
+    char message[MSG_MAX_LEN];
+    int msg_len;
+    enum _msg_type_ logger_msg_type;                                                                  
+};
 
 /*---------------------------- STRUCTURES/ENUMERATIONS ----------------------*/
 
@@ -81,10 +104,9 @@ int light_sensor_init();
  *
  *  @param void
  *
- *  @return 0  : if lux data retrieval is a success
-            -1 : if lux data retrieval fails
+ *  @return float lux data
 */
-int get_lux_data();
+float get_lux_data();
 
 /**
  *  @brief Write light sensor register
@@ -112,6 +134,42 @@ int write_light_sensor_reg(int cmd_reg_val, int target_reg_val);
  *          -1        : if register read fails 
 */
 int8_t read_light_sensor_reg(uint8_t read_reg_val);
+
+/**
+ *  @brief Get the ADC channel data
+ *  
+ *  This function will read the ADC data for channel specified by @param(
+ *  channel_num) and populate them @param(ch_data_low) and @param(ch_data_high)
+ *
+ *  @param channel_num     : ADC channel number to be read
+ *  @param ch_data         : pointer to ADC data
+ *
+ *  @return void 
+*/
+void get_adc_channel_data(int channel_num, int *ch_data);
+
+/**
+ *  @brief Calculate the lux value
+ *  
+ *  This function calculates the illuminance value
+ *
+ *  @param ch0_data     : ADC channel 0 data
+ *  @param ch1_data     : ADC channel 1 data
+ *
+ *  @return void 
+*/
+float calculate_lux_value(int ch0_data, int ch1_data);
+
+/**
+ *  @brief Log the lux value
+ *  
+ *  This function writes the lux value calculated to logger message queue
+ *
+ *  @param lux_data     : lux_data
+ *
+ *  @return void
+*/
+void log_lux_data(float lux_data);
 
 /**
  *  @brief Cleanup of the light sensor
