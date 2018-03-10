@@ -11,16 +11,12 @@
 
 void write_pointer_register(int file_descriptor, uint8_t value){
 
-	printf("In write_pointer_register with value:%d\n",value);
-	
 	if (write(file_descriptor, &value, 1) != 1) {
 		perror("Write pointer register error\n");
 	}
 }
 
 void write_temp_high_low_register(int file_descriptor, int sensor_register, uint16_t data ){
-	
-	printf("In write_temp_low_register function \n");
 	
 	/* Writing to the pointer register for reading Tlow register */
 	write_pointer_register(file_descriptor, sensor_register);
@@ -32,8 +28,6 @@ void write_temp_high_low_register(int file_descriptor, int sensor_register, uint
 }
 
 uint16_t read_temp_high_low_register(int file_descriptor, int sensor_register){
-	
-	printf("In read_temp_low_register function \n");
 	
 	uint16_t tlow_output_value;
 	uint8_t data[1]={0};
@@ -52,10 +46,7 @@ uint16_t read_temp_high_low_register(int file_descriptor, int sensor_register){
 	
 }
 
-
 uint16_t read_temp_config_register(int file_descriptor){
-	
-	printf("In read_temp_config_register function \n");
 	
 	uint16_t temp_config_value;
 	uint8_t data[1]={0};
@@ -75,8 +66,6 @@ uint16_t read_temp_config_register(int file_descriptor){
 }
 
 float read_temperature_data_register(int file_descriptor,int format){
-	
-	printf("In read_temperature_data_register function \n");
 	
 	float temperature_value;
 	uint8_t data[1]={0};
@@ -223,14 +212,12 @@ void *socket_thread_func(void *arg)
     memset(recv_buffer, '\0', sizeof(recv_buffer));
     
     size_t num_read_bytes = read(accept_conn_id, &recv_buffer, sizeof(recv_buffer));
-    printf("Message received: %s\n", recv_buffer);
+    printf("Message received in temperature task: %s\n", recv_buffer);
 
 }
 
 int create_threads()
 {
-    int sensor_thread_id, socket_thread_id;
-
     int sens_t_creat_ret_val = pthread_create(&sensor_thread_id, NULL, &sensor_thread_func, NULL);
     if (sens_t_creat_ret_val)
     {
@@ -250,8 +237,7 @@ int create_threads()
 
 int main()
 {
-
-	sprintf(i2c_name, "/dev/i2c-2");
+    sprintf(i2c_name, "/dev/i2c-2");
 
     int temp_sensor_init_status = temp_sensor_init();
     if (temp_sensor_init_status == -1)
@@ -265,8 +251,19 @@ int main()
     }
 
     int thread_create_status = create_threads();
+    if (thread_create_status)
+    {
+        printf("Thread creation failed\n");
+    }
+    else
+    {
+        printf("Thread creation success\n");
+    }
 
-	close(temp_fd);
-		
-	return 0;
+    pthread_join(socket_thread_id, NULL);
+    pthread_join(sensor_thread_id, NULL);
+
+    close(temp_fd);
+
+    return 0;
 }

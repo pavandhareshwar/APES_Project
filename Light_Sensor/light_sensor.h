@@ -28,6 +28,10 @@
 
 #include <mqueue.h>
 
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+
 /*---------------------------------- INCLUDES -------------------------------*/
 
 /*----------------------------------- MACROS --------------------------------*/
@@ -59,10 +63,16 @@
 
 #define MSG_MAX_LEN                                  128
 
+#define LIGHT_SENSOR_SERVER_PORT_NUM                 8085
+#define LIGHT_SENSOR_LISTEN_QUEUE_SIZE               5
+
+#define MSG_BUFF_MAX_LEN                             1024
+
 /*----------------------------------- MACROS --------------------------------*/
 
 /*---------------------------------- GLOBALS --------------------------------*/
 int i2c_light_sensor_fd;
+int server_fd, accept_conn_id;
 
 /*---------------------------------- GLOBALS --------------------------------*/
 
@@ -95,6 +105,74 @@ struct _logger_msg_struct_
             -1 : if sensor initialization fails
 */
 int light_sensor_init();
+
+/**
+ *  @brief Power on the light sensor
+ *  
+ *  This function will configure the control register to power on the light 
+ *  sensor.
+ *
+ *  @param void
+ *
+ *  @return void
+ *
+ */
+void power_on_light_sensor(void);
+
+/**
+ *  @brief Create sensor and socket threads for temperature task
+ *  
+ *  The temperature task is made multi-threaded with 
+ *     1. sensor thread responsible for communicating via I2C interface 
+ *        with the temperature sensor to get temperature data and a socket 
+ *        thread.
+ *     2. socket thread responsible for communicating with socket thread and
+ *        serve request from external application forwarded via socket task.
+ *
+ *  @param void
+ *
+ *  @return 0  : thread creation success
+ *          -1 : thread creation failed
+ *
+ */
+int create_threads(void);
+
+/**
+ *  @brief Initialize light task socket
+ *  
+ *  This function will create, bind and make the socket listen for incoming
+ *  connections.
+ *
+ *  @param void
+ *
+ *  @return void
+ *
+ */
+void init_light_socket(void);
+
+/**
+ *  @brief Entry point and executing entity for sensor thread
+ *  
+ *  The sensor thread starts execution by invoking this function(start_routine)
+ *
+ *  @param arg : argument to start_routine
+ *
+ *  @return void
+ *
+ */
+void *sensor_thread_func(void *arg);
+
+/**
+ *  @brief Entry point and executing entity for socket thread
+ *  
+ *  The socket thread starts execution by invoking this function(start_routine)
+ *
+ *  @param arg : argument to start_routine
+ *
+ *  @return void
+ *
+ */
+void *socket_thread_func(void *arg);
 
 /**
  *  @brief Get lux data from light sensor

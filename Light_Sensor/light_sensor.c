@@ -20,10 +20,6 @@ int main(void){
         exit(1);
     }
 
-    float sensor_lux_data = get_lux_data();
-
-    log_lux_data(sensor_lux_data);
-
 	light_sensor_exit();
 
 	return 0;
@@ -46,13 +42,100 @@ int light_sensor_init(void)
 	}
 
     /* Power on the APDS-9301 device */
-	int cmd_ctrl_reg_val = I2C_LIGHT_SENSOR_CMD_CTRL_REG;
+    power_on_light_sensor();
+
+    return 0;
+}
+
+void power_on_light_sensor(void)
+{
+    int cmd_ctrl_reg_val = I2C_LIGHT_SENSOR_CMD_CTRL_REG;
 	
 	int ctrl_reg_val = I2C_LIGHT_SENSOR_CTRL_REG_VAL;
 	
     write_light_sensor_reg(cmd_ctrl_reg_val, ctrl_reg_val);
 
+}
+
+int create_threads(void)
+{
+    int sensor_thread_id, socket_thread_id;
+    int sens_t_creat_ret_val = pthread_create(&sensor_thread_id, NULL, &sensor_thread_func, NULL);
+    if (sens_t_creat_ret_val)
+    {
+        perror("Sensor thread creation failed");
+        return -1;
+    }
+
+    int sock_t_creat_ret_val = pthread_create(&socket_thread_id, NULL, &socket_thread_func, NULL);
+    if (sock_t_creat_ret_val)
+    {
+        perror("Socket thread creation failed");
+        return -1;
+    }
+
     return 0;
+}
+
+void init_light_socket(void)
+{
+    struct sockaddr_in server_address;
+    int serv_addr_len = sizeof(server_address);
+    
+    /* Create the socket */
+    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
+    {
+        perror("socket creation failed");
+        pthread_exit(NULL); // Change these return values from pthread_exit
+    }
+
+    server_address.sin_family = AF_INET;
+    server_address.sin_addr.s_addr = INADDR_ANY;
+    server_address.sin_port = htons(LIGHT_SENSOR_SERVER_PORT_NUM);
+
+    if (bind(server_fd, (struct sockaddr *)&server_address,
+								sizeof(server_address))<0)
+    {
+        perror("bind failed");
+        pthread_exit(NULL);
+    }
+
+    if (listen(server_fd, LIGHT_SENSOR_LISTEN_QUEUE_SIZE) < 0)
+    {
+        perror("listen failed");
+        pthread_exit(NULL);
+    }
+    
+    if ((accept_conn_id = accept(server_fd, (struct sockaddr *)&server_address,
+                                    (socklen_t*)&serv_addr_len)) < 0)
+    {
+        perror("accept failed");
+        pthread_exit(NULL);
+    }
+
+}
+
+void *socket_thread_func(void *arg)
+{
+
+    init_light_socket();
+
+    char recv_buffer[MSG_BUFF_MAX_LEN];
+    memset(recv_buffer, '\0', sizeof(recv_buffer));
+    
+    size_t num_read_bytes = read(accept_conn_id, &recv_buffer, sizeof(recv_buffer));
+    printf("Message received in light task: %s\n", recv_buffer);
+
+}
+
+void *sensor_thread_func(void *arg)
+{
+    while (1)
+    {
+        float sensor_lux_data = get_lux_data();
+
+        log_lux_data(sensor_lux_data);
+    }
 }
 
 float get_lux_data(void)
