@@ -6,9 +6,6 @@
 *               of logger task.
 *************************************************************************/
 
-#include <stdio.h>
-#include <stdlib.h>
-
 #include "logger_task.h"
 
 int main(void)
@@ -20,7 +17,7 @@ int main(void)
         exit(1);
     }
 
-    write_test_msg_to_logger();
+    //write_test_msg_to_logger();
 
     read_from_logger_msg_queue();
 
@@ -53,7 +50,15 @@ int logger_task_init()
     memset(filename, '\0', sizeof(filename));
     sprintf(filename, "%s%s", LOGGER_FILE_PATH, LOGGER_FILE_NAME);
 
-    logger_fd = open(filename, O_WRONLY | O_APPEND);
+    if (open(filename, O_RDONLY) != -1)
+    {
+        printf("Logger file exists. Deleting existing file.\n");
+        remove(filename);
+        sync();
+    }
+   
+    printf("Trying to create file %s\n", filename);
+    logger_fd = creat(filename ,(S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH));
     if (logger_fd == -1)
     {
         perror("Logger file open failed");
@@ -99,16 +104,17 @@ void read_from_logger_msg_queue()
         if (num_recv_bytes < 0)
             perror("mq_receive failed");
 
-        printf("Message received: %s, message type: %s\n", 
+        printf("Message received: %s, msg_type: %d, message type: %s\n", 
             (((struct _logger_msg_struct_ *)&recv_buffer)->message),
-            ((((struct _logger_msg_struct_ *)&recv_buffer)->logger_msg_type) == MSG_TYPE_TEMP_DATA ? 
+            (((struct _logger_msg_struct_ *)&recv_buffer)->logger_msg_type),
+            (((((struct _logger_msg_struct_ *)&recv_buffer)->logger_msg_type) == MSG_TYPE_TEMP_DATA) ? 
              "Temp Data" : "Lux Data"));
 
-        char msg_to_write[256];
+        char msg_to_write[LOG_MSG_PAYLOAD_SIZE];
         memset(msg_to_write, '\0', sizeof(msg_to_write));
         sprintf(msg_to_write, "Message: %s | Message_Type: %s\n", 
             (((struct _logger_msg_struct_ *)&recv_buffer)->message),
-            ((((struct _logger_msg_struct_ *)&recv_buffer)->logger_msg_type) == MSG_TYPE_TEMP_DATA ?
+            (((((struct _logger_msg_struct_ *)&recv_buffer)->logger_msg_type) == MSG_TYPE_TEMP_DATA) ?
              "TEMP_DATA" : "LUX_DATA"));
 
         printf("Message to write: %s\n", msg_to_write);

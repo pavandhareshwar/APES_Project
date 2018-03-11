@@ -10,6 +10,8 @@
 #define _LOGGER_TASK_H_
 
 /*---------------------------------- INCLUDES -------------------------------*/
+#include <stdio.h>
+#include <stdlib.h>
 #include <errno.h>
 #include <stdint.h>
 #include <string.h>
@@ -36,6 +38,7 @@
 #define LOGGER_FILE_PATH                     "./"
 #define LOGGER_FILE_NAME                     "logger_file.txt"
 
+#define LOG_MSG_PAYLOAD_SIZE                 256
 #define MSG_MAX_LEN                          128
 
 /*----------------------------------- MACROS --------------------------------*/
