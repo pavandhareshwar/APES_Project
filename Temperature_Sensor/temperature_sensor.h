@@ -19,14 +19,19 @@
 #include <unistd.h>
 #include <stdint.h>
 #include <linux/i2c-dev.h>
-#include <sys/ioctl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
 
 #include <netinet/in.h>
 #include <arpa/inet.h>
+
+#include <sys/ioctl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/msg.h>
+#include <sys/ipc.h>
 #include <sys/socket.h>
+
+#include <mqueue.h>
 
 /*---------------------------------- GLOBALS --------------------------------*/
 int temp_fd;
@@ -37,6 +42,9 @@ int sensor_thread_id, socket_thread_id;
 /*----------------------------------- MACROS --------------------------------*/
 
 #define I2C_SLAVE_ADDR				    0b01001000
+#define I2C_SLAVE_DEV_NAME              "/dev/i2c-2"
+
+
 #define I2C_TEMP_SENSOR_TEMP_DATA_REG	0b00000000	// Temperature data register (read-only)
 #define I2C_TEMP_SENSOR_CONFIG_REG	    0b00000001	// command register
 #define I2C_TEMP_SENSOR_TLOW_REG	    0b00000010	// T_low register
@@ -45,7 +53,15 @@ int sensor_thread_id, socket_thread_id;
 #define SERVER_PORT_NUM                 8081
 #define SERVER_LISTEN_QUEUE_SIZE        5
 
-#define MSG_BUFF_MAX_LEN                1024 
+#define MSG_BUFF_MAX_LEN                1024
+#define MSG_MAX_LEN                     128
+
+#define MSG_QUEUE_NAME                  "/logger_task_mq"
+#define MSG_QUEUE_MAX_NUM_MSGS          5
+#define MSG_QUEUE_MAX_MSG_SIZE          1024
+
+#define SOCK_REQ_MSG_API_MSG_LEN        64
+
 /*---------------------------- STRUCTURES/ENUMERATIONS ----------------------*/
 
 typedef enum{
@@ -56,6 +72,31 @@ typedef enum{
 	
 }tempformat_e;
 
+enum _msg_type_                                                                                       
+{                                                                                                     
+    MSG_TYPE_TEMP_DATA,                                                                               
+    MSG_TYPE_LUX_DATA                                                                                 
+};                                                                                                    
+                                                                                                      
+struct _logger_msg_struct_                                                                            
+{   
+    char message[MSG_MAX_LEN];
+    int msg_len;
+    enum _msg_type_ logger_msg_type;                                                                  
+};
+
+enum _req_recipient_
+{   
+    REQ_RECP_TEMP_TASK, 
+    REQ_RECP_LIGHT_TASK
+};  
+    
+struct _socket_req_msg_struct_
+{
+    char req_api_msg[SOCK_REQ_MSG_API_MSG_LEN];
+    enum _req_recipient_ req_recipient;
+    void *ptr_param_list;
+};
 
 /*---------------------------- FUNCTION PROTOTYPES --------------------------*/
 /**
@@ -122,5 +163,16 @@ uint16_t read_temp_config_register(int file_descriptor);
             -1 : if sensor initialization fails
 */
 float read_temperature_data_register(int file_descriptor,int format);
+
+/**
+ *  @brief Log the temperature value
+ *  
+ *  This function writes the temperature value calculated to logger message queue
+ *
+ *  @param temp_data     : temperature data to be logged
+ *
+ *  @return void
+*/
+void log_temp_data(float temp_data);
 
 #endif // #ifndef _TEMPERATURE_SENSOR_TASK_H_
