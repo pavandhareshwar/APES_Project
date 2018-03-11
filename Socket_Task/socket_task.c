@@ -17,7 +17,6 @@ int main(void)
         return -1;
     }
    
-#if 0
     initialize_sensor_task_socket(&light_sockfd, &light_sock_addr, LIGHT_TASK_PORT_NUM);
 
     if (connect(light_sockfd, (struct sockaddr *)&light_sock_addr, sizeof(light_sock_addr)) < 0)
@@ -25,19 +24,18 @@ int main(void)
         printf("\nConnection Failed for light task \n");
         return -1;
     }
-#endif
 
-	int accept_conn_id;
-	while(1){
-	
-        /* Wait for request from external application */
-		if ((accept_conn_id = accept(server_sockfd, (struct sockaddr *)&server_addr, 
-					   (socklen_t *)&serv_addr_len)) < 0)
-		{
-			perror("accept");
-		}
-	
-        char recv_buffer[BUFF_SIZE];
+    int accept_conn_id;
+    /* Wait for request from external application */
+    if ((accept_conn_id = accept(server_sockfd, (struct sockaddr *)&server_addr, 
+                    (socklen_t *)&serv_addr_len)) < 0)
+    {
+        perror("accept");
+    }
+
+    char recv_buffer[BUFF_SIZE];
+	while(1)
+    {
         memset(recv_buffer, '\0', sizeof(recv_buffer));
         int num_recv_bytes = recv(accept_conn_id, recv_buffer, sizeof(recv_buffer), 0);
         if (num_recv_bytes < 0)
@@ -47,40 +45,48 @@ int main(void)
         }
         else
         {
-            printf("Message req api: %s, req recp: %s, req api params: %s\n",
-                    (((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg),
-                    ((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_recipient) 
-                     == REQ_RECP_TEMP_TASK ? "Temp Task" : "Light Task"),
-                    (((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list != NULL ?
-                     ((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list : "NULL"));
-           
-            log_req_msg((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg));
 
-            memset(buffer, '\0', sizeof(buffer));
-            strncpy(buffer, "Hello!", strlen("Hello!"));
+            if (*(((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg) != '\0')
+            {
+                printf("Message req api: %s, req recp: %s, req api params: %s\n",
+                        (((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg),
+                        ((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_recipient) 
+                         == REQ_RECP_TEMP_TASK ? "Temp Task" : "Light Task"),
+                        (((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list != NULL ?
+                         "Non NULL" : "NULL"));
 
-            size_t sent_bytes;
-#if 0
-            if ((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_recipient) 
+                //log_req_msg((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg));
+
+                memset(buffer, '\0', sizeof(buffer));
+                //strncpy(buffer, "Hello!", strlen("Hello!"));
+   
+                size_t sent_bytes;
+                if ((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_recipient) 
                         == REQ_RECP_TEMP_TASK)
-            {
-                printf("Sending request to temperature task\n");
-                sent_bytes = send(temp_sockfd, recv_buffer, sizeof(recv_buffer), 0);
+                {
+                    printf("Sending request to temperature task\n");
+                    sent_bytes = send(temp_sockfd, recv_buffer, sizeof(recv_buffer), 0);
 
-                ssize_t num_recv_bytes = recv(temp_sockfd, buffer, sizeof(buffer), 0);
-                if (num_recv_bytes < 0)
-                    perror("recv failed");
+                    ssize_t num_recv_bytes = recv(temp_sockfd, buffer, sizeof(buffer), 0);
+                    if (num_recv_bytes < 0)
+                        perror("recv failed");
+                    strncpy(buffer, "Hello!", strlen("Hello!"));
+                    sent_bytes = send(accept_conn_id, buffer, strlen(buffer), 0);
+                }
+                else
+                {
+                    printf("Sending request to light task\n");
+                    sent_bytes = send(light_sockfd, recv_buffer, sizeof(recv_buffer), 0);
 
-                sent_bytes = send(accept_conn_id, buffer, strlen(buffer), 0);
+                    ssize_t num_recv_bytes = recv(light_sockfd, buffer, sizeof(buffer), 0);
+                    if (num_recv_bytes < 0)
+                        perror("recv failed");
+                    strncpy(buffer, "Hello!", strlen("Hello!"));
+                    sent_bytes = send(accept_conn_id, buffer, strlen(buffer), 0);
+                }
+                
+                //sent_bytes = send(accept_conn_id, buffer, sizeof(buffer), 0 );
             }
-            else
-            {
-            }
-
-            //sent_bytes = send(light_sockfd, buffer , sizeof(buffer) , 0);
-            //sent_bytes = send(accept_conn_id, buffer, sizeof(buffer), 0 );
-#endif
-            sent_bytes = send(accept_conn_id, buffer, sizeof(buffer), 0 );
         }
 	}
 	return 0;
