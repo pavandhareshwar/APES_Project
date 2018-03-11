@@ -35,11 +35,11 @@ void write_config_register_on_off(uint8_t data ){
 		default_config_byte_one |= data;
 		
 		/* Writing data to the configuration register */
-		if (write(file_descriptor, default_config_byte_one, 1) != 1) {
+		if (write(file_descriptor, &default_config_byte_one, 1) != 1) {
 			perror("Configuration register write error for first byte");
 		}
 		
-		if (write(file_descriptor, default_config_byte_two, 1) != 1) {
+		if (write(file_descriptor, &default_config_byte_two, 1) != 1) {
 			perror("Configuration register write error for second byte");
 		}
 	}
@@ -53,11 +53,11 @@ void write_config_register_em(uint8_t data ){
 		default_config_byte_two |= (data << 4);
 		
 		/* Writing data to the configuration register */
-		if (write(file_descriptor, default_config_byte_one, 1) != 1) {
+		if (write(file_descriptor, &default_config_byte_one, 1) != 1) {
 			perror("Configuration register write error for first byte");
 		}
 		
-		if (write(file_descriptor, default_config_byte_two, 1) != 1) {
+		if (write(file_descriptor, &default_config_byte_two, 1) != 1) {
 			perror("Configuration register write error for second byte");
 		}
 	}
@@ -71,11 +71,11 @@ void write_config_register_conversion_rate(uint8_t data ){
 		default_config_byte_two |= (data << 6);
 		
 		/* Writing data to the configuration register */
-		if (write(file_descriptor, default_config_byte_one, 1) != 1) {
+		if (write(file_descriptor, &default_config_byte_one, 1) != 1) {
 			perror("Configuration register write error for first byte");
 		}
 		
-		if (write(file_descriptor, default_config_byte_two, 1) != 1) {
+		if (write(file_descriptor, &default_config_byte_two, 1) != 1) {
 			perror("Configuration register write error for second byte");
 		}
 	}
@@ -87,11 +87,11 @@ void write_config_register_default( ){
 	write_pointer_register(file_descriptor, I2C_TEMP_SENSOR_CONFIG_REG);
 	
 	/* Writing data to the configuration register */
-	if (write(file_descriptor, default_config_byte_one, 1) != 1) {
+	if (write(file_descriptor, &default_config_byte_one, 1) != 1) {
 		perror("Configuration register write error for first byte");
 	}
 	
-	if (write(file_descriptor, default_config_byte_two, 1) != 1) {
+	if (write(file_descriptor, &default_config_byte_two, 1) != 1) {
 		perror("Configuration register write error for second byte");
 	}
 }
