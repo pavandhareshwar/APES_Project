@@ -51,6 +51,14 @@ struct _socket_req_msg_struct_
     void *ptr_param_list;
 };
 
+struct _int_thresh_reg_struct_
+{
+    uint8_t thresh_low_low;
+    uint8_t thresh_low_high;
+    uint8_t thresh_high_low;
+    uint8_t thresh_high_high;
+};
+
 /*---------------------------- STRUCTURES/ENUMERATIONS ----------------------*/
 
 /*---------------------------- FUNCTION PROTOTYPES --------------------------*/

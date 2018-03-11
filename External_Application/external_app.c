@@ -41,11 +41,11 @@ int main(void)
     }
 
     struct _socket_req_msg_struct_ ext_app_req_msg = {0};
-    strcpy(ext_app_req_msg.req_api_msg, "get_temp_data");
-    ext_app_req_msg.req_recipient = REQ_RECP_TEMP_TASK;
+    strcpy(ext_app_req_msg.req_api_msg, "get_lux_data");
+    ext_app_req_msg.req_recipient = REQ_RECP_LIGHT_TASK;
     ext_app_req_msg.ptr_param_list = NULL;
 
-    printf("Sending data to socket task\n");
+    printf("Sending %s request to socket task\n", ext_app_req_msg.req_api_msg);
     ssize_t num_sent_bytes = send(client_sock, &ext_app_req_msg, 
             sizeof(struct _socket_req_msg_struct_), 0);
     if (num_sent_bytes < 0)
@@ -57,6 +57,76 @@ int main(void)
         /* Receiving message from parent process */
         size_t num_read_bytes = read(client_sock, buffer, sizeof(buffer));
         printf("Message received in external app : %s\n", buffer);
+    }
+   
+    sleep(2);
+
+    strcpy(ext_app_req_msg.req_api_msg, "get_light_sensor_int_thresh_reg");
+    ext_app_req_msg.req_recipient = REQ_RECP_LIGHT_TASK;
+    ext_app_req_msg.ptr_param_list = NULL;
+
+    printf("Sending %s request to socket task\n", ext_app_req_msg.req_api_msg);
+    num_sent_bytes = send(client_sock, &ext_app_req_msg, 
+            sizeof(struct _socket_req_msg_struct_), 0);
+    if (num_sent_bytes < 0)
+    {
+        perror("send failed");
+    }
+    else
+    {
+        /* Receiving message from parent process */
+        size_t num_read_bytes = read(client_sock, buffer, sizeof(buffer));
+        printf("[External App] : Int Thresh Reg Val:: lowlow: 0x%x, lowhigh: 0x%x, highlow: 0x%x, highhigh: 0x%x\n", 
+                ((struct _int_thresh_reg_struct_ *)&buffer)->thresh_low_low, ((struct _int_thresh_reg_struct_ *)&buffer)->thresh_low_high, 
+                ((struct _int_thresh_reg_struct_ *)&buffer)->thresh_high_low, ((struct _int_thresh_reg_struct_ *)&buffer)->thresh_high_high);
+    }
+  
+    sleep(2);
+
+    struct _int_thresh_reg_struct_ int_thresh_reg_struct = {0};
+    int_thresh_reg_struct.thresh_low_low = 5;
+    int_thresh_reg_struct.thresh_low_high = 0;
+    int_thresh_reg_struct.thresh_high_low = 20;
+    int_thresh_reg_struct.thresh_high_high = 0;
+
+    strcpy(ext_app_req_msg.req_api_msg, "set_light_sensor_int_thresh_reg");
+    ext_app_req_msg.req_recipient = REQ_RECP_LIGHT_TASK;
+    ext_app_req_msg.ptr_param_list = &int_thresh_reg_struct;
+
+    printf("Sending %s request to socket task\n", ext_app_req_msg.req_api_msg);
+    num_sent_bytes = send(client_sock, &ext_app_req_msg, 
+            sizeof(struct _socket_req_msg_struct_), 0);
+    if (num_sent_bytes < 0)
+    {
+        perror("send failed");
+    }
+    else
+    {
+        /* Receiving message from parent process */
+        size_t num_read_bytes = read(client_sock, buffer, sizeof(buffer));
+        printf("Message received in external app : %s\n", buffer);
+    }
+
+    sleep(2);
+    
+    strcpy(ext_app_req_msg.req_api_msg, "get_light_sensor_int_thresh_reg");
+    ext_app_req_msg.req_recipient = REQ_RECP_LIGHT_TASK;
+    ext_app_req_msg.ptr_param_list = NULL;
+
+    printf("Sending %s request to socket task\n", ext_app_req_msg.req_api_msg);
+    num_sent_bytes = send(client_sock, &ext_app_req_msg, 
+            sizeof(struct _socket_req_msg_struct_), 0);
+    if (num_sent_bytes < 0)
+    {
+        perror("send failed");
+    }
+    else
+    {
+        /* Receiving message from parent process */
+        size_t num_read_bytes = read(client_sock, buffer, sizeof(buffer));
+        printf("[External App] : Int Thresh Reg Val:: lowlow: 0x%x, lowhigh: 0x%x, highlow: 0x%x, highhigh: 0x%x\n", 
+                ((struct _int_thresh_reg_struct_ *)&buffer)->thresh_low_low, ((struct _int_thresh_reg_struct_ *)&buffer)->thresh_low_high, 
+                ((struct _int_thresh_reg_struct_ *)&buffer)->thresh_high_low, ((struct _int_thresh_reg_struct_ *)&buffer)->thresh_high_high);
     }
 	
 	return 0;	
