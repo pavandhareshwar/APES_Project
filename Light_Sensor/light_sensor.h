@@ -68,11 +68,13 @@
 
 #define MSG_BUFF_MAX_LEN                             1024
 
+#define SOCK_REQ_MSG_API_MSG_LEN                     64
 /*----------------------------------- MACROS --------------------------------*/
 
 /*---------------------------------- GLOBALS --------------------------------*/
 int i2c_light_sensor_fd;
 int server_fd, accept_conn_id;
+int sensor_thread_id, socket_thread_id;
 
 /*---------------------------------- GLOBALS --------------------------------*/
 
@@ -88,6 +90,27 @@ struct _logger_msg_struct_
     char message[MSG_MAX_LEN];
     int msg_len;
     enum _msg_type_ logger_msg_type;                                                                  
+};
+
+enum _req_recipient_
+{   
+    REQ_RECP_TEMP_TASK, 
+    REQ_RECP_LIGHT_TASK
+};  
+    
+struct _socket_req_msg_struct_
+{
+    char req_api_msg[SOCK_REQ_MSG_API_MSG_LEN];
+    enum _req_recipient_ req_recipient;
+    void *ptr_param_list;
+};
+
+struct _int_thresh_reg_struct_
+{
+    uint8_t thresh_low_low;
+    uint8_t thresh_low_high;
+    uint8_t thresh_high_low;
+    uint8_t thresh_high_high;
 };
 
 /*---------------------------- STRUCTURES/ENUMERATIONS ----------------------*/
@@ -143,12 +166,12 @@ int create_threads(void);
  *  This function will create, bind and make the socket listen for incoming
  *  connections.
  *
- *  @param void
+ *  @param sock_addr_struct : pointer to sockaddr_in structure
  *
  *  @return void
  *
  */
-void init_light_socket(void);
+void init_light_socket(struct sockaddr_in *sock_addr_struct);
 
 /**
  *  @brief Entry point and executing entity for sensor thread

@@ -20,6 +20,19 @@ int main(void){
         exit(1);
     }
 
+    int thread_create_status = create_threads();
+    if (thread_create_status)
+    {
+        printf("Thread creation failed\n");
+    }
+    else
+    {
+        printf("Thread creation success\n");
+    }
+
+    pthread_join(sensor_thread_id, NULL);
+    pthread_join(socket_thread_id, NULL);
+
 	light_sensor_exit();
 
 	return 0;
@@ -59,7 +72,6 @@ void power_on_light_sensor(void)
 
 int create_threads(void)
 {
-    int sensor_thread_id, socket_thread_id;
     int sens_t_creat_ret_val = pthread_create(&sensor_thread_id, NULL, &sensor_thread_func, NULL);
     if (sens_t_creat_ret_val)
     {
@@ -77,10 +89,8 @@ int create_threads(void)
     return 0;
 }
 
-void init_light_socket(void)
+void init_light_socket(struct sockaddr_in *sock_addr_struct)
 {
-    struct sockaddr_in server_address;
-    int serv_addr_len = sizeof(server_address);
     
     /* Create the socket */
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
@@ -89,12 +99,19 @@ void init_light_socket(void)
         pthread_exit(NULL); // Change these return values from pthread_exit
     }
 
-    server_address.sin_family = AF_INET;
-    server_address.sin_addr.s_addr = INADDR_ANY;
-    server_address.sin_port = htons(LIGHT_SENSOR_SERVER_PORT_NUM);
+    int option = 1;
+    if(setsockopt(server_fd,SOL_SOCKET,(SO_REUSEPORT | SO_REUSEADDR),(void *)&option,sizeof(option)) < 0)
+    {
+        perror("setsockopt failed");
+        pthread_exit(NULL);
+    }
 
-    if (bind(server_fd, (struct sockaddr *)&server_address,
-								sizeof(server_address))<0)
+    sock_addr_struct->sin_family = AF_INET;
+    sock_addr_struct->sin_addr.s_addr = INADDR_ANY;
+    sock_addr_struct->sin_port = htons(LIGHT_SENSOR_SERVER_PORT_NUM);
+
+    if (bind(server_fd, (struct sockaddr *)sock_addr_struct,
+								sizeof(struct sockaddr_in))<0)
     {
         perror("bind failed");
         pthread_exit(NULL);
@@ -105,27 +122,203 @@ void init_light_socket(void)
         perror("listen failed");
         pthread_exit(NULL);
     }
-    
-    if ((accept_conn_id = accept(server_fd, (struct sockaddr *)&server_address,
-                                    (socklen_t*)&serv_addr_len)) < 0)
-    {
-        perror("accept failed");
-        pthread_exit(NULL);
-    }
-
 }
 
 void *socket_thread_func(void *arg)
 {
+    struct sockaddr_in server_address;
+    int serv_addr_len = sizeof(server_address);
 
-    init_light_socket();
+    init_light_socket(&server_address);
 
     char recv_buffer[MSG_BUFF_MAX_LEN];
-    memset(recv_buffer, '\0', sizeof(recv_buffer));
     
-    size_t num_read_bytes = read(accept_conn_id, &recv_buffer, sizeof(recv_buffer));
-    printf("Message received in light task: %s\n", recv_buffer);
+    int accept_conn_id;
+    printf("Waiting for request...\n");
+    if ((accept_conn_id = accept(server_fd, (struct sockaddr *)&server_address,
+                    (socklen_t*)&serv_addr_len)) < 0)
+    {
+        perror("accept failed");
+        //pthread_exit(NULL);
+    }
 
+    while (1)
+    {
+        memset(recv_buffer, '\0', sizeof(recv_buffer));
+
+        size_t num_read_bytes = read(accept_conn_id, &recv_buffer, sizeof(recv_buffer));
+
+        printf("[Light_Task] Message req api: %s, req recp: %s, req api params: %s\n",
+                (((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg),
+                ((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_recipient)
+                 == REQ_RECP_TEMP_TASK ? "Temp Task" : "Light Task"),
+                (((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list != NULL ?
+                 ((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list :"NULL"));
+
+        char light_sensor_rsp_msg[64];
+        if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "get_lux_data"))
+        {
+            float lux_data = get_lux_data();
+            memset(light_sensor_rsp_msg, '\0', sizeof(light_sensor_rsp_msg));
+
+            sprintf(light_sensor_rsp_msg, "Lux Data: %3.2f", lux_data);
+        
+            ssize_t num_sent_bytes = send(accept_conn_id, light_sensor_rsp_msg, strlen(light_sensor_rsp_msg), 0);
+            if (num_sent_bytes < 0)
+                perror("send failed");
+
+        }
+        else if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "get_light_sensor_id"))
+        {
+            uint8_t cmd_id_reg = I2C_LIGHT_SENSOR_CMD_ID_REG;
+        
+            int8_t light_sen_id_reg_val = read_light_sensor_reg(cmd_id_reg);
+            printf("id reg val : %d\n", light_sen_id_reg_val);
+
+            memset(light_sensor_rsp_msg, '\0', sizeof(light_sensor_rsp_msg));
+
+            sprintf(light_sensor_rsp_msg, "ID reg val: 0x%x", light_sen_id_reg_val);
+            
+            ssize_t num_sent_bytes = send(accept_conn_id, light_sensor_rsp_msg, strlen(light_sensor_rsp_msg), 0);
+            if (num_sent_bytes < 0)
+                perror("send failed");
+
+        }
+        else if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "get_light_sensor_ctrl_reg"))
+        {
+            uint8_t cmd_ctrl_reg = I2C_LIGHT_SENSOR_CMD_CTRL_REG;
+        
+            int8_t light_sen_ctrl_reg_val = read_light_sensor_reg(cmd_ctrl_reg);
+            printf("ctrl reg val : %d\n", light_sen_ctrl_reg_val);
+
+            memset(light_sensor_rsp_msg, '\0', sizeof(light_sensor_rsp_msg));
+
+            sprintf(light_sensor_rsp_msg, "Ctrl reg val: 0x%x", light_sen_ctrl_reg_val);
+            
+            ssize_t num_sent_bytes = send(accept_conn_id, light_sensor_rsp_msg, strlen(light_sensor_rsp_msg), 0);
+            if (num_sent_bytes < 0)
+                perror("send failed");
+        }
+        else if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "set_light_sensor_ctrl_reg"))
+        {
+            if (((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list != NULL)
+            {
+                uint8_t cmd_ctrl_reg = I2C_LIGHT_SENSOR_CMD_CTRL_REG;
+                
+                uint8_t cmd_ctrl_reg_val = *(uint8_t *)(((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list);
+                
+                if (write_light_sensor_reg(cmd_ctrl_reg, cmd_ctrl_reg_val) == 0)
+                {
+                    memset(light_sensor_rsp_msg, '\0', sizeof(light_sensor_rsp_msg));
+
+                    sprintf(light_sensor_rsp_msg, "OK");
+                }
+                
+                ssize_t num_sent_bytes = send(accept_conn_id, light_sensor_rsp_msg, strlen(light_sensor_rsp_msg), 0);
+                if (num_sent_bytes < 0)
+                    perror("send failed");
+            }
+        }
+        else if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "get_light_sensor_tim_reg"))
+        {
+            uint8_t cmd_tim_reg = I2C_LIGHT_SENSOR_CMD_TIM_REG;
+        
+            int8_t light_sen_tim_reg_val = read_light_sensor_reg(cmd_tim_reg);
+            printf("tim reg val : %d\n", light_sen_tim_reg_val);
+
+            memset(light_sensor_rsp_msg, '\0', sizeof(light_sensor_rsp_msg));
+
+            sprintf(light_sensor_rsp_msg, "Ctrl reg val: 0x%x", light_sen_tim_reg_val);
+            
+            ssize_t num_sent_bytes = send(accept_conn_id, light_sensor_rsp_msg, strlen(light_sensor_rsp_msg), 0);
+            if (num_sent_bytes < 0)
+                perror("send failed");
+        }
+        else if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "set_light_sensor_tim_reg"))
+        {
+            if (((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list != NULL)
+            {
+                uint8_t cmd_tim_reg = I2C_LIGHT_SENSOR_CMD_TIM_REG;
+                
+                uint8_t cmd_tim_reg_val = *(uint8_t *)(((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list);
+                
+                if (write_light_sensor_reg(cmd_tim_reg, cmd_tim_reg_val) == 0)
+                {
+                    memset(light_sensor_rsp_msg, '\0', sizeof(light_sensor_rsp_msg));
+
+                    sprintf(light_sensor_rsp_msg, "OK");
+                    ssize_t num_sent_bytes = send(accept_conn_id, light_sensor_rsp_msg, strlen(light_sensor_rsp_msg), 0);
+                    if (num_sent_bytes < 0)
+                        perror("send failed");
+                    }
+            }
+        }
+        else if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "get_light_sensor_int_thresh_reg"))
+        {
+            uint8_t cmd_thresh_low_low_reg = I2C_LIGHT_SENSOR_CMD_THRESH_LOW_LOW_REG;
+            uint8_t cmd_thresh_low_high_reg = I2C_LIGHT_SENSOR_CMD_THRESH_LOW_HIGH_REG;
+            uint8_t cmd_thresh_high_low_reg = I2C_LIGHT_SENSOR_CMD_THRESH_HIGH_LOW_REG;
+            uint8_t cmd_thresh_high_high_reg = I2C_LIGHT_SENSOR_CMD_THRESH_HIGH_HIGH_REG;
+        
+            int8_t light_sen_thresh_low_low_reg_val = read_light_sensor_reg(cmd_thresh_low_low_reg);
+            printf("thresh low low reg val : %d\n", light_sen_thresh_low_low_reg_val);
+            
+            int8_t light_sen_thresh_low_high_reg_val = read_light_sensor_reg(cmd_thresh_low_high_reg);
+            printf("thresh low high reg val : %d\n", light_sen_thresh_low_high_reg_val);
+            
+            int8_t light_sen_thresh_high_low_reg_val = read_light_sensor_reg(cmd_thresh_high_low_reg);
+            printf("thresh high low reg val : %d\n", light_sen_thresh_high_low_reg_val);
+            
+            int8_t light_sen_thresh_high_high_reg_val = read_light_sensor_reg(cmd_thresh_high_high_reg);
+            printf("thresh high high reg val : %d\n", light_sen_thresh_high_high_reg_val);
+
+            memset(light_sensor_rsp_msg, '\0', sizeof(light_sensor_rsp_msg));
+
+            struct _int_thresh_reg_struct_ int_thresh_reg_struct;
+            int_thresh_reg_struct.thresh_low_low = light_sen_thresh_low_low_reg_val;
+            int_thresh_reg_struct.thresh_low_high = light_sen_thresh_low_high_reg_val;
+            int_thresh_reg_struct.thresh_high_low = light_sen_thresh_high_low_reg_val;
+            int_thresh_reg_struct.thresh_high_high = light_sen_thresh_high_high_reg_val;
+            
+            ssize_t num_sent_bytes = send(accept_conn_id, &int_thresh_reg_struct, 
+                                            sizeof(struct _int_thresh_reg_struct_), 0);
+            if (num_sent_bytes < 0)
+                perror("send failed");
+        }
+        else if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "set_light_sensor_int_thresh_reg"))
+        {
+            if (((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list != NULL)
+            {
+                struct _int_thresh_reg_struct_ *p_int_thresh_reg_struct = 
+                    (struct _int_thresh_reg_struct_ *)(((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list);
+
+                uint8_t cmd_thresh_low_low_reg = I2C_LIGHT_SENSOR_CMD_THRESH_LOW_LOW_REG;
+                uint8_t cmd_thresh_low_low_reg_val = (uint8_t)p_int_thresh_reg_struct->thresh_low_low;
+                write_light_sensor_reg(cmd_thresh_low_low_reg, cmd_thresh_low_low_reg_val);
+                
+                uint8_t cmd_thresh_low_high_reg = I2C_LIGHT_SENSOR_CMD_THRESH_LOW_HIGH_REG;
+                uint8_t cmd_thresh_low_high_reg_val = (uint8_t)p_int_thresh_reg_struct->thresh_low_high;
+                write_light_sensor_reg(cmd_thresh_low_high_reg, cmd_thresh_low_high_reg_val);
+                
+                uint8_t cmd_thresh_high_low_reg = I2C_LIGHT_SENSOR_CMD_THRESH_HIGH_LOW_REG;
+                uint8_t cmd_thresh_high_low_reg_val = (uint8_t)p_int_thresh_reg_struct->thresh_high_low;
+                write_light_sensor_reg(cmd_thresh_high_low_reg, cmd_thresh_high_low_reg_val);
+                
+                uint8_t cmd_thresh_high_high_reg = I2C_LIGHT_SENSOR_CMD_THRESH_HIGH_HIGH_REG;
+                uint8_t cmd_thresh_high_high_reg_val = (uint8_t)p_int_thresh_reg_struct->thresh_high_high;
+                write_light_sensor_reg(cmd_thresh_high_high_reg, cmd_thresh_high_high_reg_val);
+
+                sprintf(light_sensor_rsp_msg, "OK");
+                ssize_t num_sent_bytes = send(accept_conn_id, light_sensor_rsp_msg, strlen(light_sensor_rsp_msg), 0);
+                if (num_sent_bytes < 0)
+                    perror("send failed");
+            }
+        }
+        else
+        {
+            printf("Invalid request from socket task\n");
+        }
+    }
 }
 
 void *sensor_thread_func(void *arg)
@@ -134,7 +327,11 @@ void *sensor_thread_func(void *arg)
     {
         float sensor_lux_data = get_lux_data();
 
-        log_lux_data(sensor_lux_data);
+        printf("Sensor lux data: %3.2f\n", sensor_lux_data);
+        
+        //log_lux_data(sensor_lux_data);
+        
+        sleep(5);
     }
 }
 
@@ -162,10 +359,10 @@ void get_adc_channel_data(int channel_num, int *ch_data)
         uint8_t cmd_data0_high_reg = I2C_LIGHT_SENSOR_CMD_DATA0HIGH_REG;
         
         int8_t ch_data_low = read_light_sensor_reg(cmd_data0_low_reg);
-        printf("data0_low : %d\n", ch_data_low);
+        //printf("data0_low : %d\n", ch_data_low);
 
         int8_t ch_data_high = read_light_sensor_reg(cmd_data0_high_reg);
-        printf("data0_high : %d\n", ch_data_high);
+        //printf("data0_high : %d\n", ch_data_high);
 
         *ch_data = ch_data_high << 8 | ch_data_low;
     }
@@ -175,10 +372,10 @@ void get_adc_channel_data(int channel_num, int *ch_data)
         uint8_t cmd_data1_high_reg = I2C_LIGHT_SENSOR_CMD_DATA1HIGH_REG;
         
         int8_t ch_data_low = read_light_sensor_reg(cmd_data1_low_reg);
-        printf("data1_low : %d\n", ch_data_low);
+        //printf("data1_low : %d\n", ch_data_low);
 	
         int8_t ch_data_high = read_light_sensor_reg(cmd_data1_high_reg);
-        printf("data1_high : %d\n", ch_data_high);
+        //printf("data1_high : %d\n", ch_data_high);
         
         *ch_data = ch_data_high << 8 | ch_data_low;
     }
@@ -266,7 +463,7 @@ int8_t read_light_sensor_reg(uint8_t read_reg_val)
 		perror("adc data read error");
         return -1;
 	}
-    printf("**** read val for %d: %d\n", read_reg_val, read_val);
+    //printf("**** read val for %d: %d\n", read_reg_val, read_val);
 
     int8_t ret_val = (int8_t)read_val;
 
