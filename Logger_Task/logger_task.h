@@ -53,7 +53,8 @@ int logger_fd;
 enum _msg_type_
 {
     MSG_TYPE_TEMP_DATA,
-    MSG_TYPE_LUX_DATA
+    MSG_TYPE_LUX_DATA,
+    MSG_TYPE_SOCK_DATA
 };
 
 struct _logger_msg_struct_

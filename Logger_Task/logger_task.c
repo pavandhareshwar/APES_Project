@@ -107,15 +107,17 @@ void read_from_logger_msg_queue()
         printf("Message received: %s, msg_type: %d, message type: %s\n", 
             (((struct _logger_msg_struct_ *)&recv_buffer)->message),
             (((struct _logger_msg_struct_ *)&recv_buffer)->logger_msg_type),
-            (((((struct _logger_msg_struct_ *)&recv_buffer)->logger_msg_type) == MSG_TYPE_TEMP_DATA) ? 
-             "Temp Data" : "Lux Data"));
+            (((((struct _logger_msg_struct_ *)&recv_buffer)->logger_msg_type) == MSG_TYPE_TEMP_DATA) ?
+             "Temp Data" : ((((struct _logger_msg_struct_ *)&recv_buffer)->logger_msg_type) 
+                 == MSG_TYPE_LUX_DATA) ? "Lux Data" : "Sock Data"));
 
         char msg_to_write[LOG_MSG_PAYLOAD_SIZE];
         memset(msg_to_write, '\0', sizeof(msg_to_write));
         sprintf(msg_to_write, "Message: %s | Message_Type: %s\n", 
             (((struct _logger_msg_struct_ *)&recv_buffer)->message),
             (((((struct _logger_msg_struct_ *)&recv_buffer)->logger_msg_type) == MSG_TYPE_TEMP_DATA) ?
-             "TEMP_DATA" : "LUX_DATA"));
+             "TEMP_DATA" : ((((struct _logger_msg_struct_ *)&recv_buffer)->logger_msg_type) == MSG_TYPE_LUX_DATA) ?
+             "LUX_DATA" : "SOCK_DATA"));
 
         printf("Message to write: %s\n", msg_to_write);
         int num_written_bytes = write(logger_fd, msg_to_write, strlen(msg_to_write));
