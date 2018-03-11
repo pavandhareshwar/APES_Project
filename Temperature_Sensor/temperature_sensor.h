@@ -113,7 +113,7 @@ int default_config_byte_two = 0XA0;
  *
  *  @return void
 */
-void write_pointer_register(int file_descriptor, uint8_t value);
+void write_pointer_register(uint8_t value);
 
 /**
  *  @brief Write temperature high and low register of temperature sensor
@@ -126,7 +126,7 @@ void write_pointer_register(int file_descriptor, uint8_t value);
  *
  *  @return void
 */
-void write_temp_high_low_register(int file_descriptor, int sensor_register, uint16_t data );
+void write_temp_high_low_register(int sensor_register, uint16_t data );
 
 /**
  *  @brief Read temperature high and low register of temperature sensor
@@ -140,7 +140,7 @@ void write_temp_high_low_register(int file_descriptor, int sensor_register, uint
  *  @return reg_val   : if register read is successful
  *          -1        : if register read fails
 */
-uint16_t read_temp_high_low_register(int file_descriptor, int sensor_register);
+uint16_t read_temp_high_low_register(int sensor_register);
 
 /**
  *  @brief Read temperature config of temperature sensor
@@ -153,7 +153,7 @@ uint16_t read_temp_high_low_register(int file_descriptor, int sensor_register);
  *  @return reg_val   : if register read is successful
  *          -1        : if register read fails
 */
-uint16_t read_temp_config_register(int file_descriptor);
+uint16_t read_temp_config_register();
 
 /**
  *  @brief Read temperature data of temperature sensor
@@ -166,7 +166,7 @@ uint16_t read_temp_config_register(int file_descriptor);
  *  @return temp_value  : if register read is successful
             -1 : if sensor initialization fails
 */
-float read_temperature_data_register(int file_descriptor,int format);
+float read_temperature_data_register(int format);
 
 /**
  *  @brief Log the temperature value
