@@ -148,17 +148,16 @@ float read_temperature_data_register(int format){
 	}
 	
 	if(format == TEMP_CELSIUS){
-		printf("In data register, data_0:%d,data_1:%d\n",data[0],data[1]);
-		temperature_value = (data[0]<<4 | (data[1] >> 4 & 0XF)) * 0.625;
+		temperature_value = (data[0]<<4 | (data[1] >> 4 & 0XF)) * 0.0625;
 		printf("Temperature value is: %3.2f degree Celsius \n", temperature_value);
 	}
 	else if(format == TEMP_KELVIN){
-		temperature_value = (data[0]<<4 | (data[1] >> 4 & 0XF)) * 0.625;
+		temperature_value = (data[0]<<4 | (data[1] >> 4 & 0XF)) * 0.0625;
 		temperature_value += 273.15;
 		printf("Temperature value is: %3.2f degree Kelvin \n", temperature_value);
 	}
 	else if(format == TEMP_FARENHEIT){
-		temperature_value = (data[0]<<4 | (data[1] >> 4 & 0XF)) * 0.625;
+		temperature_value = (data[0]<<4 | (data[1] >> 4 & 0XF)) * 0.0625;
 		temperature_value = ((temperature_value * 9)/5 + 32);
 		printf("Temperature value is: %3.2f degree Fahrenheit \n", temperature_value);
 		
