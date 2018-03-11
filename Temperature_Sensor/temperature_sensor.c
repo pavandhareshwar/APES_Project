@@ -139,9 +139,8 @@ float read_temperature_data_register(int format){
 	float temperature_value;
 	uint8_t data[3]={0};
 
-    data[0] = I2C_TEMP_SENSOR_TEMP_DATA_REG;
 	/* Writing to the pointer register for reading temperature data register */
-	write_pointer_register(data);
+	write_pointer_register(I2C_TEMP_SENSOR_TEMP_DATA_REG);
 	
 	/* Reading the temperature data register value */
 	if (read(file_descriptor, data, 2) != 2) {
@@ -149,6 +148,7 @@ float read_temperature_data_register(int format){
 	}
 	
 	if(format == TEMP_CELSIUS){
+		printf("In data register, data_0:%d,data_1:%d\n",data[0],data[1]);
 		temperature_value = (data[0]<<4 | (data[1] >> 4 & 0XF)) * 0.625;
 		printf("Temperature value is: %3.2f degree Celsius \n", temperature_value);
 	}
@@ -196,7 +196,6 @@ void *sensor_thread_func(void *arg)
     while (1)
     {
         temp_value = read_temperature_data_register(TEMP_CELSIUS);
-		printf("Temperature value in celsius:%f",temp_value);
 
         //log_temp_data(temp_data);
 
