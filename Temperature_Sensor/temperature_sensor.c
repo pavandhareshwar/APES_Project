@@ -342,7 +342,7 @@ void *socket_thread_func(void *arg)
         {
             if((((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list) != NULL){
 				
-				uint8_t data = (int *)(((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list);
+				uint8_t data = (uint8_t *)(((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list);
 				write_config_register_on_off(data);
 				char temp_data_msg[64];
 				memset(temp_data_msg, '\0', sizeof(temp_data_msg));
@@ -358,7 +358,7 @@ void *socket_thread_func(void *arg)
         {
             if((((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list) != NULL){
 				
-				uint8_t data = (int *)(((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list);
+				uint8_t data = (uint8_t *)(((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list);
 				write_config_register_em(data);
 				char temp_data_msg[64];
 				memset(temp_data_msg, '\0', sizeof(temp_data_msg));
@@ -374,7 +374,7 @@ void *socket_thread_func(void *arg)
         {
             if((((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list) != NULL){
 				
-				uint8_t data = (int *)(((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list);
+				uint8_t data = (uint8_t *)(((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list);
 				write_config_register_conversion_rate(data);
 				char temp_data_msg[64];
 				memset(temp_data_msg, '\0', sizeof(temp_data_msg));
