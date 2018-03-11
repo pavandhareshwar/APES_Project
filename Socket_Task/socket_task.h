@@ -19,9 +19,13 @@
 
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/ipc.h>
+#include <sys/msg.h>
 
 #include <netinet/in.h>
 #include <arpa/inet.h>
+
+#include <mqueue.h>
 
 /*---------------------------------- INCLUDES -------------------------------*/
 
@@ -40,6 +44,12 @@
 #define BUFF_SIZE                           1024
 
 #define SOCK_REQ_MSG_API_MSG_LEN            64
+
+#define MSG_MAX_LEN                         128
+
+#define MSG_QUEUE_NAME                      "/logger_task_mq"
+#define MSG_QUEUE_MAX_NUM_MSGS              5
+#define MSG_QUEUE_MAX_MSG_SIZE              1024
 
 /*----------------------------------- MACROS --------------------------------*/
 
@@ -63,6 +73,19 @@ struct _socket_req_msg_struct_
     void *ptr_param_list;
 };
 
+enum _msg_type_                                                                                       
+{                                                                                                     
+    MSG_TYPE_TEMP_DATA,                                                                               
+    MSG_TYPE_LUX_DATA,
+    MSG_TYPE_SOCK_DATA
+};                                                                                                    
+                                                                                                      
+struct _logger_msg_struct_                                                                            
+{   
+    char message[MSG_MAX_LEN];
+    int msg_len;
+    enum _msg_type_ logger_msg_type;                                                                  
+};
 
 /*---------------------------- STRUCTURES/ENUMERATIONS ----------------------*/
 
@@ -105,6 +128,16 @@ void initialize_server_socket(struct sockaddr_in *sock_addr_struct,
 void initialize_sensor_task_socket(int *sock_fd, struct sockaddr_in *sock_addr_struct, 
                                     int port_num);
 
+/**
+ *  @brief Log the socket task request
+ *
+ *  This function writes the socket task request to logger message queue
+ *
+ *  @param req_msg     : pointer to request message string 
+ *
+ *  @return void
+*/
+void log_req_msg(char *req_msg);
 /*---------------------------- FUNCTION PROTOTYPES --------------------------*/
 
 #endif // _SOCKET_TASK_H_

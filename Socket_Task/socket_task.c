@@ -53,11 +53,14 @@ int main(void)
                      == REQ_RECP_TEMP_TASK ? "Temp Task" : "Light Task"),
                     (((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list != NULL ?
                      ((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list : "NULL"));
-            
+           
+            log_req_msg((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg));
+
             memset(buffer, '\0', sizeof(buffer));
             strncpy(buffer, "Hello!", strlen("Hello!"));
-            
+
             size_t sent_bytes;
+#if 0
             if ((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_recipient) 
                         == REQ_RECP_TEMP_TASK)
             {
@@ -76,7 +79,8 @@ int main(void)
 
             //sent_bytes = send(light_sockfd, buffer , sizeof(buffer) , 0);
             //sent_bytes = send(accept_conn_id, buffer, sizeof(buffer), 0 );
-
+#endif
+            sent_bytes = send(accept_conn_id, buffer, sizeof(buffer), 0 );
         }
 	}
 	return 0;
@@ -148,4 +152,33 @@ void initialize_sensor_task_socket(int *sock_fd, struct sockaddr_in *sock_addr_s
         printf("\nInvalid address/ Address not supported for temperature task\n");
         exit(EXIT_FAILURE);
     }
+}
+
+void log_req_msg(char *req_msg)
+{
+    int msg_priority;
+
+    /* Set the message queue attributes */
+    struct mq_attr logger_mq_attr = { .mq_flags = 0,
+                                      .mq_maxmsg = MSG_QUEUE_MAX_NUM_MSGS,  // Max number of messages on queue
+                                      .mq_msgsize = MSG_QUEUE_MAX_MSG_SIZE  // Max. message size
+                                    };
+
+    mqd_t logger_mq_handle = mq_open(MSG_QUEUE_NAME, O_RDWR, S_IRWXU, &logger_mq_attr);
+
+    char sock_data_msg[MSG_MAX_LEN];
+    memset(sock_data_msg, '\0', sizeof(sock_data_msg));
+
+    sprintf(sock_data_msg, "Req Msg: %s", req_msg);
+
+    struct _logger_msg_struct_ logger_msg = {0};
+    strcpy(logger_msg.message, sock_data_msg);
+    logger_msg.msg_len = strlen(sock_data_msg);
+    logger_msg.logger_msg_type = MSG_TYPE_SOCK_DATA;
+
+    msg_priority = 1;
+    int num_sent_bytes = mq_send(logger_mq_handle, (char *)&logger_msg,
+                            sizeof(logger_msg), msg_priority);
+    if (num_sent_bytes < 0)
+        perror("mq_send failed");
 }
