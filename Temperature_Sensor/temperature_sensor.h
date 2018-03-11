@@ -34,9 +34,11 @@
 #include <mqueue.h>
 
 /*---------------------------------- GLOBALS --------------------------------*/
-int temp_fd;
 char i2c_name[10];
 int sensor_thread_id, socket_thread_id;
+int file_descriptor;
+int default_config_byte_one = 0X50;
+int default_config_byte_two = 0XA0;
 
 
 /*----------------------------------- MACROS --------------------------------*/
@@ -98,9 +100,7 @@ struct _socket_req_msg_struct_
     void *ptr_param_list;
 };
 
-int file_descriptor;
-int default_config_byte_one = 0X50;
-int default_config_byte_two = 0XA0;
+
 
 /*---------------------------- FUNCTION PROTOTYPES --------------------------*/
 /**

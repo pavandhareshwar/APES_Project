@@ -19,7 +19,7 @@ void write_pointer_register(uint8_t value){
 void write_temp_high_low_register(int sensor_register, uint16_t data ){
 	
 	/* Writing to the pointer register for reading Tlow register */
-	write_pointer_register(file_descriptor, sensor_register);
+	write_pointer_register(sensor_register);
 	
 	/* Reading the Tlow register value */
 	if (write(file_descriptor, &data, 2) != 2) {
@@ -30,7 +30,7 @@ void write_temp_high_low_register(int sensor_register, uint16_t data ){
 void write_config_register_on_off(uint8_t data ){
 	
 	/* Writing to the pointer register for configuration register */
-	write_pointer_register(file_descriptor, I2C_TEMP_SENSOR_CONFIG_REG);
+	write_pointer_register(I2C_TEMP_SENSOR_CONFIG_REG);
 	if((data == 0) || (data == 1)){
 		default_config_byte_one |= data;
 		
@@ -48,7 +48,7 @@ void write_config_register_on_off(uint8_t data ){
 void write_config_register_em(uint8_t data ){
 	
 	/* Writing to the pointer register for configuration register */
-	write_pointer_register(file_descriptor, I2C_TEMP_SENSOR_CONFIG_REG);
+	write_pointer_register(I2C_TEMP_SENSOR_CONFIG_REG);
 	if((data == 0) || (data == 1)){
 		default_config_byte_two |= (data << 4);
 		
@@ -66,7 +66,7 @@ void write_config_register_em(uint8_t data ){
 void write_config_register_conversion_rate(uint8_t data ){
 	
 	/* Writing to the pointer register for configuration register */
-	write_pointer_register(file_descriptor, I2C_TEMP_SENSOR_CONFIG_REG);
+	write_pointer_register(I2C_TEMP_SENSOR_CONFIG_REG);
 	if((data >= 0) || (data <= 3)){
 		default_config_byte_two |= (data << 6);
 		
@@ -84,7 +84,7 @@ void write_config_register_conversion_rate(uint8_t data ){
 void write_config_register_default( ){
 	
 	/* Writing to the pointer register for configuration register */
-	write_pointer_register(file_descriptor, I2C_TEMP_SENSOR_CONFIG_REG);
+	write_pointer_register(I2C_TEMP_SENSOR_CONFIG_REG);
 	
 	/* Writing data to the configuration register */
 	if (write(file_descriptor, &default_config_byte_one, 1) != 1) {
@@ -102,7 +102,7 @@ uint16_t read_temp_high_low_register(int sensor_register){
 	uint8_t data[1]={0};
 	
 	/* Writing to the pointer register for reading Tlow register */
-	write_pointer_register(file_descriptor, sensor_register);
+	write_pointer_register(sensor_register);
 	
 	/* Reading the Tlow register value */
 	if (read(file_descriptor, data, 1) != 1) {
@@ -121,7 +121,7 @@ uint16_t read_temp_config_register(){
 	uint8_t data[1]={0};
 	
 	/* Writing to the pointer register for reading THigh register */
-	write_pointer_register(file_descriptor, I2C_TEMP_SENSOR_CONFIG_REG);
+	write_pointer_register(I2C_TEMP_SENSOR_CONFIG_REG);
 	
 	/* Reading the THigh register value */
 	if (read(file_descriptor, data, 1) != 1) {
@@ -141,7 +141,7 @@ float read_temperature_data_register(int format){
 
     data[0] = I2C_TEMP_SENSOR_TEMP_DATA_REG;
 	/* Writing to the pointer register for reading temperature data register */
-	write_pointer_register(file_descriptor, data);
+	write_pointer_register(data);
 	
 	/* Reading the temperature data register value */
 	if (read(file_descriptor, data, 2) != 2) {
@@ -172,13 +172,13 @@ float read_temperature_data_register(int format){
 
 int temp_sensor_init()
 {
-	if ((temp_fd = open(I2C_SLAVE_DEV_NAME, O_RDWR)) < 0) {
+	if ((file_descriptor = open(I2C_SLAVE_DEV_NAME, O_RDWR)) < 0) {
         perror("Failed to open the bus.");
         /* ERROR HANDLING; you can check errno to see what went wrong */
 		return -1;
 	}
 	
-	if (ioctl(temp_fd,I2C_SLAVE,I2C_SLAVE_ADDR) < 0) {
+	if (ioctl(file_descriptor,I2C_SLAVE,I2C_SLAVE_ADDR) < 0) {
 		perror("Failed to acquire bus access and/or talk to slave");
 		/* ERROR HANDLING; you can check errno to see what went wrong */
 		return -1;
@@ -294,7 +294,7 @@ void *socket_thread_func(void *arg)
     
         if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "get_temp_data"))
         {
-            float temp_data = read_temperature_data_register(temp_fd, TEMP_CELSIUS);
+            float temp_data = read_temperature_data_register(TEMP_CELSIUS);
             char temp_data_msg[64];
             memset(temp_data_msg, '\0', sizeof(temp_data_msg));
 
@@ -353,7 +353,7 @@ int main()
     pthread_join(sensor_thread_id, NULL);
     pthread_join(socket_thread_id, NULL);
 
-    close(temp_fd);
+    close(file_descriptor);
 
     return 0;
 }
