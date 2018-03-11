@@ -9,14 +9,14 @@
 #include "temperature_sensor.h"
 
 
-void write_pointer_register(int file_descriptor, uint8_t value){
+void write_pointer_register(uint8_t value){
 
 	if (write(file_descriptor, &value, 1) != 1) {
 		perror("Write pointer register error\n");
 	}
 }
 
-void write_temp_high_low_register(int file_descriptor, int sensor_register, uint16_t data ){
+void write_temp_high_low_register(int sensor_register, uint16_t data ){
 	
 	/* Writing to the pointer register for reading Tlow register */
 	write_pointer_register(file_descriptor, sensor_register);
@@ -27,7 +27,76 @@ void write_temp_high_low_register(int file_descriptor, int sensor_register, uint
 	}
 }
 
-uint16_t read_temp_high_low_register(int file_descriptor, int sensor_register){
+void write_config_register_on_off(uint8_t data ){
+	
+	/* Writing to the pointer register for configuration register */
+	write_pointer_register(file_descriptor, I2C_TEMP_SENSOR_CONFIG_REG);
+	if((data == 0) || (data == 1)){
+		default_config_byte_one |= data;
+		
+		/* Writing data to the configuration register */
+		if (write(file_descriptor, default_config_byte_one, 1) != 1) {
+			perror("Configuration register write error for first byte");
+		}
+		
+		if (write(file_descriptor, default_config_byte_two, 1) != 1) {
+			perror("Configuration register write error for second byte");
+		}
+	}
+}
+
+void write_config_register_em(uint8_t data ){
+	
+	/* Writing to the pointer register for configuration register */
+	write_pointer_register(file_descriptor, I2C_TEMP_SENSOR_CONFIG_REG);
+	if((data == 0) || (data == 1)){
+		default_config_byte_two |= (data << 4);
+		
+		/* Writing data to the configuration register */
+		if (write(file_descriptor, default_config_byte_one, 1) != 1) {
+			perror("Configuration register write error for first byte");
+		}
+		
+		if (write(file_descriptor, default_config_byte_two, 1) != 1) {
+			perror("Configuration register write error for second byte");
+		}
+	}
+}
+
+void write_config_register_conversion_rate(uint8_t data ){
+	
+	/* Writing to the pointer register for configuration register */
+	write_pointer_register(file_descriptor, I2C_TEMP_SENSOR_CONFIG_REG);
+	if((data >= 0) || (data <= 3)){
+		default_config_byte_two |= (data << 6);
+		
+		/* Writing data to the configuration register */
+		if (write(file_descriptor, default_config_byte_one, 1) != 1) {
+			perror("Configuration register write error for first byte");
+		}
+		
+		if (write(file_descriptor, default_config_byte_two, 1) != 1) {
+			perror("Configuration register write error for second byte");
+		}
+	}
+}
+
+void write_config_register_default( ){
+	
+	/* Writing to the pointer register for configuration register */
+	write_pointer_register(file_descriptor, I2C_TEMP_SENSOR_CONFIG_REG);
+	
+	/* Writing data to the configuration register */
+	if (write(file_descriptor, default_config_byte_one, 1) != 1) {
+		perror("Configuration register write error for first byte");
+	}
+	
+	if (write(file_descriptor, default_config_byte_two, 1) != 1) {
+		perror("Configuration register write error for second byte");
+	}
+}
+
+uint16_t read_temp_high_low_register(int sensor_register){
 	
 	uint16_t tlow_output_value;
 	uint8_t data[1]={0};
@@ -46,7 +115,7 @@ uint16_t read_temp_high_low_register(int file_descriptor, int sensor_register){
 	
 }
 
-uint16_t read_temp_config_register(int file_descriptor){
+uint16_t read_temp_config_register(){
 	
 	uint16_t temp_config_value;
 	uint8_t data[1]={0};
@@ -65,7 +134,7 @@ uint16_t read_temp_config_register(int file_descriptor){
 	
 }
 
-float read_temperature_data_register(int file_descriptor,int format){
+float read_temperature_data_register(int format){
 	
 	float temperature_value;
 	uint8_t data[3]={0};
@@ -120,53 +189,14 @@ int temp_sensor_init()
 
 void *sensor_thread_func(void *arg)
 {
-	int config_byte[3];
 	
-	config_byte[0] = I2C_TEMP_SENSOR_CONFIG_REG;
-	config_byte[1] = 0X50;
-	config_byte[2] = 0XA0;
-	
-	if(write(temp_fd, config_byte, 3) != 3){
-		 printf("Failed to write to the i2c bus.\n");	
-	}
-	
-	uint8_t data[3];
-	memset(data,0,sizeof(data));
-	data[0] = I2C_TEMP_SENSOR_TLOW_REG;
-	if (write(temp_fd, data, 1) != 1) {
-		perror("temperature low register write error");
-	}
-	if (read(temp_fd, data, 1) != 1) {
-		perror("temperature low register read error");
-	}
-	printf("data[0]:%d,data[1]:%d \n",data[0],data[1]);
-	
-	memset(data,0,sizeof(data));
-	data[0] = I2C_TEMP_SENSOR_THIGH_REG;
-	if (write(temp_fd, data, 1) != 1) {
-		perror("temperature high register write error");
-	}
-	if (read(temp_fd, data, 1) != 1) {
-		perror("temperature high register read error");
-	}
-	printf("data[0]:%d,data[1]:%d,data[2]:%d \n",data[0],data[1],data[2]);
-	
+	write_config_register_default();
+	float temp_value;
    
     while (1)
     {
-        memset(data,0,sizeof(data));
-        data[0] = I2C_TEMP_SENSOR_TEMP_DATA_REG;
-        if (write(temp_fd, data, 1) != 1) {
-            perror("temperature data register write error");
-        }
-	
-        if (read(temp_fd, data, 2) != 2) {
-            perror("temperature data register read error");
-        }
-        printf("data[0]:%d,data[1]:%d \n",data[0],data[1]);
-        printf("temp value :%3.2f celsius\n", (data[0]<<4 | (data[1] >> 4 & 0XF)) * 0.0625);
-
-        float temp_data = (data[0]<<4 | (data[1] >> 4 & 0XF)) * 0.0625;
+        temp_value = read_temperature_data_register(TEMP_CELSIUS);
+		printf("Temperature value in celsius:%f",temp_value);
 
         //log_temp_data(temp_data);
 

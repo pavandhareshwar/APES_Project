@@ -98,6 +98,10 @@ struct _socket_req_msg_struct_
     void *ptr_param_list;
 };
 
+int file_descriptor;
+int default_config_byte_one = 0X50;
+int default_config_byte_two = 0XA0;
+
 /*---------------------------- FUNCTION PROTOTYPES --------------------------*/
 /**
  *  @brief Write pointer register of temperature sensor
