@@ -41,6 +41,9 @@
 #define LOG_MSG_PAYLOAD_SIZE                 256
 #define MSG_MAX_LEN                          128
 
+#define LOGGER_FILE_PATH_LEN                 256           
+#define LOGGER_FILE_NAME_LEN                 64           
+
 /*----------------------------------- MACROS --------------------------------*/
 
 /*---------------------------------- GLOBALS --------------------------------*/
@@ -68,10 +71,11 @@ struct _logger_msg_struct_
 
 /*---------------------------- FUNCTION PROTOTYPES --------------------------*/
 /**
- *  @brief Initialize the light sensor
+ *  @brief Initialize the logger task
  *  
- *  This function will open the i2c bus for read and write operation and 
- *  initialize the communication with the peripheral.
+ *  This funcition will create the message queue for logger task and
+ *  open a file handle of logger file for writing. (If the logger file
+ *  already exists, it is deleted and a fresh one is created). 
  *
  *  @param void
  *
@@ -79,6 +83,8 @@ struct _logger_msg_struct_
             -1 : if sensor initialization fails
 */
 int logger_task_init();
+
+int read_logger_conf_file(char *file);
 
 void write_test_msg_to_logger();
 

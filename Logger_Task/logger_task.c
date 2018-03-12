@@ -48,7 +48,12 @@ int logger_task_init()
     
     char filename[100];
     memset(filename, '\0', sizeof(filename));
-    sprintf(filename, "%s%s", LOGGER_FILE_PATH, LOGGER_FILE_NAME);
+    int conf_file_read_status = read_logger_conf_file(filename);
+    if (conf_file_read_status != 0)
+    {
+        printf("Logger task config file read failed. Using default log file path and name\n");
+        sprintf(filename, "%s%s", LOGGER_FILE_PATH, LOGGER_FILE_NAME);
+    }
 
     if (open(filename, O_RDONLY) != -1)
     {
@@ -56,7 +61,7 @@ int logger_task_init()
         remove(filename);
         sync();
     }
-   
+
     printf("Trying to create file %s\n", filename);
     logger_fd = creat(filename ,(S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH));
     if (logger_fd == -1)
@@ -68,6 +73,62 @@ int logger_task_init()
     {
         printf("Logger file open success\n");
     }
+
+    return 0;
+}
+
+int read_logger_conf_file(char *file)
+{
+    FILE *fp_conf_file = fopen("./logger_task_conf_file.txt", "r");
+    if (fp_conf_file == NULL)
+    {
+        perror("file open failed");
+        printf("File %s open failed\n", "logger_task_conf_file.txt");
+        return -1;
+    }
+
+    char logger_file_path[LOGGER_FILE_PATH_LEN];
+    char logger_file_name[LOGGER_FILE_NAME_LEN];
+    char *buffer;
+    size_t num_bytes = 120;
+    char equal_delimiter[] = "=";
+    ssize_t bytes_read;
+
+    memset(logger_file_path, '\0', sizeof(logger_file_path));
+    memset(logger_file_name, '\0', sizeof(logger_file_name));
+
+    buffer = (char *)malloc(num_bytes*sizeof(char));
+
+    while ((bytes_read = getline(&buffer, &num_bytes, fp_conf_file)) != -1)
+    {
+        char *token = strtok(buffer, equal_delimiter);
+
+        if (!strcmp(token, "LOGGER_FILE_PATH"))
+        {
+            token = strtok(NULL, equal_delimiter);
+            strcpy(logger_file_path, token);
+            int len = strlen(logger_file_path);
+            if (logger_file_path[len-1] == '\n')
+                logger_file_path[len-1] = '\0';
+        }
+        else if (!strcmp(token, "LOGGER_FILE_NAME"))
+        {
+            token = strtok(NULL, equal_delimiter);
+            strcpy(logger_file_name, token);
+            int len = strlen(logger_file_name);
+            if (logger_file_name[len-1] == '\n')
+                logger_file_name[len-1] = '\0';
+        }
+    }
+
+    strcpy(file, logger_file_path);
+    strcat(file, logger_file_name);
+
+    if (buffer)
+        free(buffer);
+
+    if (fp_conf_file)
+        fclose(fp_conf_file);
 
     return 0;
 }
