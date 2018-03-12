@@ -35,7 +35,7 @@
 
 /*---------------------------------- GLOBALS --------------------------------*/
 char i2c_name[10];
-int sensor_thread_id, socket_thread_id;
+int sensor_thread_id, socket_thread_id, socket_hb_thread_id;
 int file_descriptor;
 int default_config_byte_one = 0X50;
 int default_config_byte_two = 0XA0;
@@ -63,6 +63,9 @@ int default_config_byte_two = 0XA0;
 #define MSG_QUEUE_MAX_MSG_SIZE          1024
 
 #define SOCK_REQ_MSG_API_MSG_LEN        64
+
+#define SOCKET_HB_PORT_NUM              8650
+#define SOCKET_HB_LISTEN_QUEUE_SIZE     5
 
 /*---------------------------- STRUCTURES/ENUMERATIONS ----------------------*/
 

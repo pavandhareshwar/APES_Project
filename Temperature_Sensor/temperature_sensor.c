@@ -231,54 +231,65 @@ void log_temp_data(float temp_data)
         perror("mq_send failed");
 }
 
-void *socket_thread_func(void *arg)
+void init_sock(int *sock_fd, struct sockaddr_in *server_addr_struct, 
+               int port_num, int listen_qsize)
 {
-    int server_fd;
-    struct sockaddr_in server_address;
-    int serv_addr_len = sizeof(server_address);
+    int serv_addr_len = sizeof(struct sockaddr_in);
 
     /* Create the socket */
-    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
+    if ((*sock_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
     {
         perror("socket creation failed");
         pthread_exit(NULL); // Change these return values from pthread_exit
     }
 
     int option = 1;
-    if(setsockopt(server_fd,SOL_SOCKET,(SO_REUSEPORT | SO_REUSEADDR),(void *)&option,sizeof(option)) < 0)
+    if(setsockopt(*sock_fd, SOL_SOCKET, (SO_REUSEPORT | SO_REUSEADDR), (void *)&option, sizeof(option)) < 0)
     {
         perror("setsockopt failed");
         pthread_exit(NULL);
     }
 
-    server_address.sin_family = AF_INET;
-    server_address.sin_addr.s_addr = INADDR_ANY;
-    server_address.sin_port = htons(SERVER_PORT_NUM);
+    server_addr_struct->sin_family = AF_INET;
+    server_addr_struct->sin_addr.s_addr = INADDR_ANY;
+    server_addr_struct->sin_port = htons(port_num);
 
-    if (bind(server_fd, (struct sockaddr *)&server_address,
-								sizeof(server_address))<0)
+    if (bind(*sock_fd, (struct sockaddr *)server_addr_struct,
+								sizeof(struct sockaddr_in))<0)
     {
         perror("bind failed");
         pthread_exit(NULL);
     }
 
-    if (listen(server_fd, SERVER_LISTEN_QUEUE_SIZE) < 0)
+    if (listen(*sock_fd, listen_qsize) < 0)
     {
         perror("listen failed");
         pthread_exit(NULL);
     }
 
+}
+
+void *socket_thread_func(void *arg)
+{
+    int server_fd;
+    struct sockaddr_in server_address;
+    int serv_addr_len = sizeof(server_address);
+
+    init_sock(&server_fd, &server_address, SERVER_PORT_NUM, SERVER_LISTEN_QUEUE_SIZE);
+
+    int accept_conn_id;
+    printf("Waiting for request...\n");
+    if ((accept_conn_id = accept(server_fd, (struct sockaddr *)&server_address,
+                    (socklen_t*)&serv_addr_len)) < 0)
+    {
+        perror("accept failed");
+        //pthread_exit(NULL);
+    }
+    
+    char recv_buffer[MSG_BUFF_MAX_LEN];
+    
     while (1)
     {
-        int accept_conn_id;
-        printf("Waiting for request...\n");
-        if ((accept_conn_id = accept(server_fd, (struct sockaddr *)&server_address,
-                        (socklen_t*)&serv_addr_len)) < 0)
-        {
-            perror("accept failed");
-            //pthread_exit(NULL);
-        }
-        char recv_buffer[MSG_BUFF_MAX_LEN];
         memset(recv_buffer, '\0', sizeof(recv_buffer));
 
         size_t num_read_bytes = read(accept_conn_id, &recv_buffer, sizeof(recv_buffer));
@@ -342,7 +353,7 @@ void *socket_thread_func(void *arg)
         {
             if((((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list) != NULL){
 				
-				uint8_t data = (uint8_t *)(((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list);
+				uint8_t data = *(uint8_t *)(((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list);
 				write_config_register_on_off(data);
 				char temp_data_msg[64];
 				memset(temp_data_msg, '\0', sizeof(temp_data_msg));
@@ -358,7 +369,7 @@ void *socket_thread_func(void *arg)
         {
             if((((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list) != NULL){
 				
-				uint8_t data = (uint8_t *)(((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list);
+				uint8_t data = *(uint8_t *)(((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list);
 				write_config_register_em(data);
 				char temp_data_msg[64];
 				memset(temp_data_msg, '\0', sizeof(temp_data_msg));
@@ -374,7 +385,7 @@ void *socket_thread_func(void *arg)
         {
             if((((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list) != NULL){
 				
-				uint8_t data = (uint8_t *)(((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list);
+				uint8_t data = *(uint8_t *)(((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list);
 				write_config_register_conversion_rate(data);
 				char temp_data_msg[64];
 				memset(temp_data_msg, '\0', sizeof(temp_data_msg));
@@ -390,6 +401,42 @@ void *socket_thread_func(void *arg)
     }
 }
 
+void *socket_hb_thread_func(void *arg)
+{
+    int sock_hb_fd;
+    struct sockaddr_in sock_hb_address;
+    int sock_hb_addr_len = sizeof(sock_hb_address);
+
+    init_sock(&sock_hb_fd, &sock_hb_address, SOCKET_HB_PORT_NUM, SOCKET_HB_LISTEN_QUEUE_SIZE);
+
+
+    int accept_conn_id;
+    printf("Waiting for request...\n");
+    if ((accept_conn_id = accept(sock_hb_fd, (struct sockaddr *)&sock_hb_address,
+                    (socklen_t*)&sock_hb_addr_len)) < 0)
+    {
+        perror("accept failed");
+        //pthread_exit(NULL);
+    }
+    
+    char recv_buffer[MSG_BUFF_MAX_LEN];
+    char send_buffer[] = "Alive";
+    
+    while (1)
+    {
+        memset(recv_buffer, '\0', sizeof(recv_buffer));
+
+        size_t num_read_bytes = read(accept_conn_id, &recv_buffer, sizeof(recv_buffer));
+    
+        if (!strcmp(recv_buffer, "heartbeat"))
+        {
+			ssize_t num_sent_bytes = send(accept_conn_id, send_buffer, strlen(send_buffer), 0);
+            if (num_sent_bytes < 0)
+                perror("send failed");
+        }
+    }
+
+}
 int create_threads()
 {
     int sens_t_creat_ret_val = pthread_create(&sensor_thread_id, NULL, &sensor_thread_func, NULL);
@@ -403,6 +450,13 @@ int create_threads()
     if (sock_t_creat_ret_val)
     {
         perror("Socket thread creation failed");
+        return -1;
+    }
+    
+    int sock_hb_t_creat_ret_val = pthread_create(&socket_hb_thread_id, NULL, &socket_hb_thread_func, NULL);
+    if (sock_hb_t_creat_ret_val)
+    {
+        perror("Socket heartbeat thread creation failed");
         return -1;
     }
 
