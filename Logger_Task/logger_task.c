@@ -19,7 +19,18 @@ int main(void)
 
     //write_test_msg_to_logger();
 
-    read_from_logger_msg_queue();
+    int thread_create_status = create_threads();
+    if (thread_create_status)
+    {
+        printf("Thread creation failed\n");
+    }
+    else
+    {
+        printf("Thread creation success\n");
+    }
+
+    pthread_join(logger_thread_id, NULL);
+    pthread_join(socket_hb_thread_id, NULL);
 
     logger_task_exit();
 
@@ -133,6 +144,71 @@ int read_logger_conf_file(char *file)
     return 0;
 }
 
+int create_threads(void)
+{
+    int logger_t_creat_ret_val = pthread_create(&logger_thread_id, NULL, &logger_thread_func, NULL);
+    if (logger_t_creat_ret_val)
+    {
+        perror("Sensor thread creation failed");
+        return -1;
+    }
+
+    int sock_hb_t_creat_ret_val = pthread_create(&socket_hb_thread_id, NULL, &socket_hb_thread_func, NULL);
+    if (sock_hb_t_creat_ret_val)
+    {
+        perror("Socket heartbeat thread creation failed");
+        return -1;
+    }
+
+    return 0;
+}
+
+void *logger_thread_func(void *arg)
+{
+    while(1)
+    {
+        /* This function will continously read from the logger task message 
+        ** queue and write it to logger file */
+        read_from_logger_msg_queue();
+    }
+}
+
+void *socket_hb_thread_func(void *arg)
+{
+    int sock_hb_fd;
+    struct sockaddr_in sock_hb_address;
+    int sock_hb_addr_len = sizeof(sock_hb_address);
+
+    init_sock(&sock_hb_fd, &sock_hb_address, SOCKET_HB_PORT_NUM, SOCKET_HB_LISTEN_QUEUE_SIZE);
+
+
+    int accept_conn_id;
+    printf("Waiting for request...\n");
+    if ((accept_conn_id = accept(sock_hb_fd, (struct sockaddr *)&sock_hb_address,
+                    (socklen_t*)&sock_hb_addr_len)) < 0)
+    {
+        perror("accept failed");
+        //pthread_exit(NULL);
+    }
+
+    char recv_buffer[MSG_BUFF_MAX_LEN];
+    char send_buffer[] = "Alive";
+
+    while (1)
+    {
+        memset(recv_buffer, '\0', sizeof(recv_buffer));
+
+        size_t num_read_bytes = read(accept_conn_id, &recv_buffer, sizeof(recv_buffer));
+
+        if (!strcmp(recv_buffer, "heartbeat"))
+        {
+			ssize_t num_sent_bytes = send(accept_conn_id, send_buffer, strlen(send_buffer), 0);
+            if (num_sent_bytes < 0)
+                perror("send failed");
+        }
+    }
+}
+
 void write_test_msg_to_logger()
 {
     struct _logger_msg_struct_ logger_msg = {0};
@@ -149,6 +225,44 @@ void write_test_msg_to_logger()
 
     if (num_sent_bytes < 0)
         perror("mq_send failed");
+}
+
+void init_sock(int *sock_fd, struct sockaddr_in *server_addr_struct,
+               int port_num, int listen_qsize)
+{
+    int serv_addr_len = sizeof(struct sockaddr_in);
+
+    /* Create the socket */
+    if ((*sock_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
+    {
+        perror("socket creation failed");
+        pthread_exit(NULL); // Change these return values from pthread_exit
+    }
+
+    int option = 1;
+    if(setsockopt(*sock_fd, SOL_SOCKET, (SO_REUSEPORT | SO_REUSEADDR), (void *)&option, sizeof(option)) < 0)
+    {
+        perror("setsockopt failed");
+        pthread_exit(NULL);
+    }
+
+    server_addr_struct->sin_family = AF_INET;
+    server_addr_struct->sin_addr.s_addr = INADDR_ANY;
+    server_addr_struct->sin_port = htons(port_num);
+
+    if (bind(*sock_fd, (struct sockaddr *)server_addr_struct,
+								sizeof(struct sockaddr_in))<0)
+    {
+        perror("bind failed");
+        pthread_exit(NULL);
+    }
+
+    if (listen(*sock_fd, listen_qsize) < 0)
+    {
+        perror("listen failed");
+        pthread_exit(NULL);
+    }
+
 }
 
 void read_from_logger_msg_queue()

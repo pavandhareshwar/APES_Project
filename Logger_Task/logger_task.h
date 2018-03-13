@@ -18,6 +18,7 @@
 
 #include <unistd.h>
 #include <fcntl.h>
+#include <pthread.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -27,6 +28,8 @@
 
 #include <mqueue.h>
 
+#include <netinet/in.h>
+#include <arpa/inet.h>
 /*---------------------------------- INCLUDES -------------------------------*/
 
 /*----------------------------------- MACROS --------------------------------*/
@@ -41,14 +44,20 @@
 #define LOG_MSG_PAYLOAD_SIZE                 256
 #define MSG_MAX_LEN                          128
 
+#define MSG_BUFF_MAX_LEN                     1024
+
 #define LOGGER_FILE_PATH_LEN                 256           
 #define LOGGER_FILE_NAME_LEN                 64           
+
+#define SOCKET_HB_PORT_NUM                   8680
+#define SOCKET_HB_LISTEN_QUEUE_SIZE          10
 
 /*----------------------------------- MACROS --------------------------------*/
 
 /*---------------------------------- GLOBALS --------------------------------*/
 mqd_t logger_msg_queue;
 int logger_fd;
+pthread_t logger_thread_id, socket_hb_thread_id;
 
 /*---------------------------------- GLOBALS --------------------------------*/
 
@@ -85,6 +94,15 @@ struct _logger_msg_struct_
 int logger_task_init();
 
 int read_logger_conf_file(char *file);
+
+int create_threads(void);
+
+void *logger_thread_func(void *arg);
+
+void *socket_hb_thread_func(void *arg);
+
+void init_sock(int *sock_fd, struct sockaddr_in *server_addr_struct,
+               int port_num, int listen_qsize);
 
 void write_test_msg_to_logger();
 
