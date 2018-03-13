@@ -16,6 +16,7 @@
 #include <string.h>
 
 #include <unistd.h>
+#include <pthread.h>
 
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -46,16 +47,20 @@
 #define SOCK_REQ_MSG_API_MSG_LEN            64
 
 #define MSG_MAX_LEN                         128
+#define MSG_BUFF_MAX_LEN                    1024
 
 #define MSG_QUEUE_NAME                      "/logger_task_mq"
 #define MSG_QUEUE_MAX_NUM_MSGS              5
 #define MSG_QUEUE_MAX_MSG_SIZE              1024
 
+#define SOCKET_HB_PORT_NUM                  8670
+#define SOCKET_HB_LISTEN_QUEUE_SIZE         10
 /*----------------------------------- MACROS --------------------------------*/
 
 /*---------------------------------- GLOBALS --------------------------------*/
 int server_sockfd, temp_sockfd, light_sockfd;
 struct sockaddr_in server_addr, temp_sock_addr, light_sock_addr;
+pthread_t socket_thread_id, socket_hb_thread_id;
 
 /*---------------------------------- GLOBALS --------------------------------*/
 
@@ -127,6 +132,15 @@ void initialize_server_socket(struct sockaddr_in *sock_addr_struct,
  */
 void initialize_sensor_task_socket(int *sock_fd, struct sockaddr_in *sock_addr_struct, 
                                     int port_num);
+
+int create_threads(void);
+
+void *socket_thread_func(void *args);
+
+void *socket_hb_thread_func(void *arg);
+
+void init_sock(int *sock_fd, struct sockaddr_in *server_addr_struct,
+               int port_num, int listen_qsize);
 
 /**
  *  @brief Log the socket task request
