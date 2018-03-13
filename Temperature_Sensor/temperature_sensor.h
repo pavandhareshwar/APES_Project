@@ -132,6 +132,50 @@ void write_pointer_register(uint8_t value);
 void write_temp_high_low_register(int sensor_register, uint16_t data );
 
 /**
+ *  @brief Write config register of temperature sensor
+ *  
+ *  This function will open the i2c bus write operation of config register of Temperature sensor.
+ *
+ *  @param data			  	: value to be written into register
+ *
+ *  @return void
+*/
+void write_config_register_on_off(uint8_t data );
+
+/**
+ *  @brief Write config register of temperature sensor
+ *  
+ *  This function will open the i2c bus write operation of config register for em bits of Temperature sensor.
+ *
+ *  @param data			  	: value to be written for em bits of config register
+ *
+ *  @return void
+*/
+void write_config_register_em(uint8_t data );
+
+/**
+ *  @brief Write config register of temperature sensor
+ *  
+ *  This function will open the i2c bus write operation of config register for conversion rate of Temperature sensor.
+ *
+ *  @param data			  	: value to be written for conversion rate of config register
+ *
+ *  @return void
+*/
+void write_config_register_conversion_rate(uint8_t data );
+
+/**
+ *  @brief Write config register of temperature sensor
+ *  
+ *  This function will open the i2c bus write operation of default values into config register of Temperature sensor.
+ *
+ *  @param data			  	: void
+ *
+ *  @return void
+*/
+void write_config_register_default( );
+
+/**
  *  @brief Read temperature high and low register of temperature sensor
  *  
  *  This function will open the i2c bus for read of temperature high and
@@ -171,6 +215,20 @@ uint16_t read_temp_config_register();
 */
 float read_temperature_data_register(int format);
 
+
+/**
+ *  @brief Initialize the temperature sensor
+ *  
+ *  This function will open the i2c bus for read and write operation and 
+ *  initialize the communication with the peripheral.
+ *
+ *  @param void
+ *
+ *  @return 0  : if sensor initialization is a success
+            -1 : if sensor initialization fails
+*/
+int temp_sensor_init();
+
 /**
  *  @brief Log the temperature value
  *  
@@ -181,5 +239,79 @@ float read_temperature_data_register(int format);
  *  @return void
 */
 void log_temp_data(float temp_data);
+
+
+
+
+/**
+ *  @brief Entry point and executing entity for sensor thread
+ *  
+ *  The sensor thread starts execution by invoking this function(start_routine)
+ *
+ *  @param arg : argument to start_routine
+ *
+ *  @return void
+ *
+ */
+void *sensor_thread_func(void *arg);
+
+/**
+ *  @brief Entry point and executing entity for socket thread
+ *  
+ *  The socket thread starts execution by invoking this function(start_routine)
+ *
+ *  @param arg : argument to start_routine
+ *
+ *  @return void
+ *
+ */
+void *socket_thread_func(void *arg);
+
+/**
+ *  @brief Entry point and executing entity for socket thread
+ *  
+ *  The socket thread for heartbeat starts execution by invoking this function(start_routine)
+ *
+ *  @param arg : argument to start_routine
+ *
+ *  @return void
+ *
+ */
+void *socket_hb_thread_func(void *arg)
+
+/**
+ *  @brief Create sensor,socket and heartbeat threads for temperature task
+ *  
+ *  The temperature task is made multi-threaded with 
+ *     1. sensor thread responsible for communicating via I2C interface 
+ *        with the temperature sensor to get temperature data and a socket 
+ *        thread.
+ *     2. socket thread responsible for communicating with socket thread and
+ *        serve request from external application forwarded via socket task.
+ *	   3. socket heartbeat responsible for communicating with main task,
+ *		  to log heartbeat every time its requested by main task.
+ *
+ *  @param void
+ *
+ *  @return 0  : thread creation success
+ *          -1 : thread creation failed
+ *
+ */
+int create_threads(void);
+
+/**
+ *  @brief Create the socket and initialize
+ *  
+ *  This function create the socket for the given socket id.
+ *
+ *  @param sock_fd     			: socket file descriptor
+ *		   server_addr_struct	: server address of the socket
+ *		   port_num  			: port number in which the socket is communicating
+ *		   listen_qsize 		: number of connections the socket is accepting
+ *
+ *  @return void
+*/
+void init_sock(int *sock_fd, struct sockaddr_in *server_addr_struct, 
+               int port_num, int listen_qsize);
 
 #endif // #ifndef _TEMPERATURE_SENSOR_TASK_H_

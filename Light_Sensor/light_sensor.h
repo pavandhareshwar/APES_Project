@@ -69,6 +69,9 @@
 #define MSG_BUFF_MAX_LEN                             1024
 
 #define SOCK_REQ_MSG_API_MSG_LEN                     64
+
+#define SOCKET_HB_PORT_NUM              8660
+#define SOCKET_HB_LISTEN_QUEUE_SIZE     5
 /*----------------------------------- MACROS --------------------------------*/
 
 /*---------------------------------- GLOBALS --------------------------------*/
@@ -143,14 +146,16 @@ int light_sensor_init();
 void power_on_light_sensor(void);
 
 /**
- *  @brief Create sensor and socket threads for temperature task
+ *  @brief Create sensor,socket and hearbeat socket threads for light task
  *  
- *  The temperature task is made multi-threaded with 
+ *  The light task is made multi-threaded with 
  *     1. sensor thread responsible for communicating via I2C interface 
- *        with the temperature sensor to get temperature data and a socket 
+ *        with the light sensor to get light data and a socket 
  *        thread.
  *     2. socket thread responsible for communicating with socket thread and
  *        serve request from external application forwarded via socket task.
+  *	   3. socket heartbeat responsible for communicating with main task,
+ *		  to log heartbeat every time its requested by main task.
  *
  *  @param void
  *
@@ -196,6 +201,18 @@ void *sensor_thread_func(void *arg);
  *
  */
 void *socket_thread_func(void *arg);
+
+/**
+ *  @brief Entry point and executing entity for socket thread
+ *  
+ *  The socket thread for heartbeat starts execution by invoking this function(start_routine)
+ *
+ *  @param arg : argument to start_routine
+ *
+ *  @return void
+ *
+ */
+void *socket_hb_thread_func(void *arg)
 
 /**
  *  @brief Get lux data from light sensor
