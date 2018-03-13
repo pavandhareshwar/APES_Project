@@ -85,6 +85,13 @@ int create_threads(void)
         perror("Socket thread creation failed");
         return -1;
     }
+	
+	int sock_hb_t_creat_ret_val = pthread_create(&socket_hb_thread_id, NULL, &socket_hb_thread_func, NULL);
+    if (sock_hb_t_creat_ret_val)
+    {
+        perror("Socket heartbeat thread creation failed");
+        return -1;
+    }
 
     return 0;
 }
@@ -333,6 +340,44 @@ void *sensor_thread_func(void *arg)
         
         sleep(5);
     }
+}
+
+
+void *socket_hb_thread_func(void *arg)
+{
+    int sock_hb_fd;
+    struct sockaddr_in sock_hb_address;
+    int sock_hb_addr_len = sizeof(sock_hb_address);
+
+    init_sock(&sock_hb_fd, &sock_hb_address, SOCKET_HB_PORT_NUM, SOCKET_HB_LISTEN_QUEUE_SIZE);
+
+
+    int accept_conn_id;
+    printf("Waiting for request...\n");
+    if ((accept_conn_id = accept(sock_hb_fd, (struct sockaddr *)&sock_hb_address,
+                    (socklen_t*)&sock_hb_addr_len)) < 0)
+    {
+        perror("accept failed");
+        //pthread_exit(NULL);
+    }
+    
+    char recv_buffer[MSG_BUFF_MAX_LEN];
+    char send_buffer[] = "Alive";
+    
+    while (1)
+    {
+        memset(recv_buffer, '\0', sizeof(recv_buffer));
+
+        size_t num_read_bytes = read(accept_conn_id, &recv_buffer, sizeof(recv_buffer));
+    
+        if (!strcmp(recv_buffer, "heartbeat"))
+        {
+			ssize_t num_sent_bytes = send(accept_conn_id, send_buffer, strlen(send_buffer), 0);
+            if (num_sent_bytes < 0)
+                perror("send failed");
+        }
+    }
+
 }
 
 float get_lux_data(void)

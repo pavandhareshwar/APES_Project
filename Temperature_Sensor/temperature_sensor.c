@@ -437,6 +437,7 @@ void *socket_hb_thread_func(void *arg)
     }
 
 }
+
 int create_threads()
 {
     int sens_t_creat_ret_val = pthread_create(&sensor_thread_id, NULL, &sensor_thread_func, NULL);
