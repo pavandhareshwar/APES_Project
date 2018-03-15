@@ -25,6 +25,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include <mqueue.h>
+
 /*---------------------------------- INCLUDES -------------------------------*/
 
 /*----------------------------------- MACROS --------------------------------*/
@@ -43,6 +45,21 @@
 #define SENSOR_TASK_SOCK_IP_ADDR            "127.0.0.1"   
 
 #define BUFF_SIZE                           1024
+#define MSG_MAX_LEN                         128
+
+#define MSG_QUEUE_NAME                      "/logger_task_mq"
+#define MSG_QUEUE_MAX_NUM_MSGS              5
+#define MSG_QUEUE_MAX_MSG_SIZE              1024
+
+#define TEMP_TASK_UNALIVE_CNT_LOG_LIMIT     5
+#define LIGHT_TASK_UNALIVE_CNT_LOG_LIMIT    5
+#define LOGGER_TASK_UNALIVE_CNT_LOG_LIMIT   5
+#define SOCK_TASK_UNALIVE_CNT_LOG_LIMIT     5
+
+#define TEMP_SENSOR_TASK_EXEC_NAME          "./temp_task &"
+#define LIGHT_SENSOR_TASK_EXEC_NAME         "./light_task &"
+#define SOCKET_TASK_EXEC_NAME               "./socket_task &"
+#define LOGGER_TASK_EXEC_NAME               "./logger_task &"
 
 /*----------------------------------- MACROS --------------------------------*/
 
@@ -53,9 +70,25 @@ int socket_task_sockfd, logger_task_sockfd;
 struct sockaddr_in temp_task_sock_addr, light_task_sock_addr;
 struct sockaddr_in socket_task_sock_addr, logger_task_sock_addr;
 
+int temp_task_unalive_count, light_task_unalive_count;
+int logger_task_unalive_count, socket_task_unalive_count;
+
 /*---------------------------------- GLOBALS --------------------------------*/
 
 /*---------------------------- STRUCTURES/ENUMERATIONS ----------------------*/
+enum _msg_type_                                                                                       
+{                                                                                                     
+    MSG_TYPE_TEMP_DATA,                                                                               
+    MSG_TYPE_LUX_DATA,
+    MSG_TYPE_MAIN_DATA
+};                                                                                                    
+                                                                                                      
+struct _logger_msg_struct_                                                                            
+{   
+    char message[MSG_MAX_LEN];
+    int msg_len;
+    enum _msg_type_ logger_msg_type;                                                                  
+};
 
 /*---------------------------- STRUCTURES/ENUMERATIONS ----------------------*/
 
@@ -108,6 +141,16 @@ void check_subtask_status(int sock_fd, char *task_name);
  *
  */
 void check_status_of_sub_tasks(void);
+
+
+void log_task_unalive_msg_to_log_file(char *task_name);
+void create_sub_processes(void);
+void create_sub_process(char *process_name);
+void perform_startup_test(void);
+int perform_sub_task_startup_test(int sock_fd);
+void stop_entire_system(void);
+void kill_already_created_processes(void);
+void turn_on_usr_led(void);
 
 /*---------------------------- FUNCTION PROTOTYPES --------------------------*/
 

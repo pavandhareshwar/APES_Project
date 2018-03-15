@@ -183,6 +183,9 @@ int temp_sensor_init()
 		return -1;
 	}
 
+    if (temp_sensor_initialized == 0)
+        temp_sensor_initialized = 1;
+
     return 0;
 }
 
@@ -420,7 +423,8 @@ void *socket_hb_thread_func(void *arg)
     }
     
     char recv_buffer[MSG_BUFF_MAX_LEN];
-    char send_buffer[] = "Alive";
+    char send_buffer[20];
+    memset(send_buffer, '\0', sizeof(send_buffer));
     
     while (1)
     {
@@ -430,6 +434,21 @@ void *socket_hb_thread_func(void *arg)
     
         if (!strcmp(recv_buffer, "heartbeat"))
         {
+            strcpy(send_buffer, "Alive");
+			ssize_t num_sent_bytes = send(accept_conn_id, send_buffer, strlen(send_buffer), 0);
+            if (num_sent_bytes < 0)
+                perror("send failed");
+        }
+        else if (!strcmp(recv_buffer, "startup_check"))
+        {
+            /* For the sake of start-up check, because we have the temperature sensor initialized
+            ** by the time this thread is spawned. So we perform a "get_temp_data" call to see if
+            ** everything is working fine */
+            if (temp_sensor_initialized == 1)
+                strcpy(send_buffer, "Initialized");
+            else
+                strcpy(send_buffer, "Uninitialized");
+
 			ssize_t num_sent_bytes = send(accept_conn_id, send_buffer, strlen(send_buffer), 0);
             if (num_sent_bytes < 0)
                 perror("send failed");
@@ -437,7 +456,6 @@ void *socket_hb_thread_func(void *arg)
     }
 
 }
-
 int create_threads()
 {
     int sens_t_creat_ret_val = pthread_create(&sensor_thread_id, NULL, &sensor_thread_func, NULL);
@@ -466,6 +484,8 @@ int create_threads()
 
 int main()
 {
+    temp_sensor_initialized = 0;
+
     int temp_sensor_init_status = temp_sensor_init();
     if (temp_sensor_init_status == -1)
     {

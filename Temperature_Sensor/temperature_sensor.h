@@ -40,6 +40,7 @@ int file_descriptor;
 int default_config_byte_one = 0X50;
 int default_config_byte_two = 0XA0;
 
+int temp_sensor_initialized;
 
 /*----------------------------------- MACROS --------------------------------*/
 
