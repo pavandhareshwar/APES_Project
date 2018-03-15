@@ -21,7 +21,6 @@ int main(void)
         return -1;
     }
 
-#if 0
     /* Create and initialize light task socket */
     initialize_sub_task_socket(&light_task_sockfd, &light_task_sock_addr, LIGHT_TASK_PORT_NUM);
 
@@ -39,7 +38,7 @@ int main(void)
         printf("\nConnection Failed for socket task \n");
         return -1;
     }
-    
+
     /* Create and initialize logger task socket */
     initialize_sub_task_socket(&logger_task_sockfd, &logger_task_sock_addr, LOGGER_TASK_PORT_NUM);
 
@@ -48,7 +47,6 @@ int main(void)
         printf("\nConnection Failed for logger task \n");
         return -1;
     }
-#endif
 
     while(1)
     {
@@ -76,7 +74,16 @@ void initialize_sub_task_socket(int *sock_fd, struct sockaddr_in *sock_addr_stru
     if(setsockopt(*sock_fd, SOL_SOCKET, (SO_REUSEPORT | SO_REUSEADDR),
                 (char*)&option,sizeof(option)) < 0)
     {
-        perror("setsockopt failed");
+        perror("setsockopt for socket reusability failed");
+        close(*sock_fd);
+        exit(EXIT_FAILURE);
+    }
+
+    struct timeval rcv_timeout;
+    rcv_timeout.tv_sec = 5;
+    if (setsockopt(*sock_fd, SOL_SOCKET, (SO_SNDTIMEO | SO_RCVTIMEO), (struct timeval *)&rcv_timeout,sizeof(struct timeval)) < 0)
+    {
+        perror("setsockopt for recv timeout set failed");
         close(*sock_fd);
         exit(EXIT_FAILURE);
     }
@@ -95,7 +102,6 @@ void check_status_of_sub_tasks(void)
     /* Check if temperature task is alive */
     check_subtask_status(temp_task_sockfd, "Temperature"); 
 
-#if 0
     /* Check if light task is alive */
     check_subtask_status(light_task_sockfd, "Light"); 
 
@@ -103,8 +109,7 @@ void check_status_of_sub_tasks(void)
     check_subtask_status(socket_task_sockfd, "Socket"); 
 
     /* Check if logger task is alive */
-    check_subtask_status(logger_task_sockfd, "Logger"); 
-#endif
+    check_subtask_status(logger_task_sockfd, "Logger");
 }
 
 void check_subtask_status(int sock_fd, char *task_name)
