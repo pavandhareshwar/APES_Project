@@ -14,6 +14,19 @@ int main(void)
 
     //create_sub_processes();
 
+    sem_t *shared_sem;
+
+    if ((shared_sem = sem_open("wrapper_sem", O_CREAT | O_EXCL, 0644, 1)) == SEM_FAILED)
+    {
+        perror("sem_open failed");
+    }
+    else
+    {
+        printf("Named semaphore created successfully\n");
+        sem_unlink("wrapper_sem");
+    }
+
+
     /* Create and initialize temperature task socket */
     initialize_sub_task_socket(&temp_task_sockfd, &temp_task_sock_addr, TEMP_TASK_PORT_NUM);
 

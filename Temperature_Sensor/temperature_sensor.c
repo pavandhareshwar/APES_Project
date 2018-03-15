@@ -7,12 +7,12 @@
 *************************************************************************/
 
 #include "temperature_sensor.h"
-
+#include "wrapper.h"
 
 void write_pointer_register(uint8_t value){
 
-	if (write(file_descriptor, &value, 1) != 1) {
-		perror("Write pointer register error\n");
+	if (wrapper_write(file_descriptor, &value, 1) != 1) {
+		perror("wrapper_write pointer register error\n");
 	}
 }
 
@@ -22,8 +22,8 @@ void write_temp_high_low_register(int sensor_register, uint16_t data ){
 	write_pointer_register(sensor_register);
 	
 	/* Writing the T_High/T_low register value */
-	if (write(file_descriptor, &data, 2) != 2) {
-		perror("T-low register write error");
+	if (wrapper_write(file_descriptor, &data, 2) != 2) {
+		perror("T-low register wrapper_write error");
 	}
 }
 
@@ -35,12 +35,12 @@ void write_config_register_on_off(uint8_t data ){
 		default_config_byte_one |= data;
 		
 		/* Writing data to the configuration register */
-		if (write(file_descriptor, &default_config_byte_one, 1) != 1) {
-			perror("Configuration register write error for first byte");
+		if (wrapper_write(file_descriptor, &default_config_byte_one, 1) != 1) {
+			perror("Configuration register wrapper_write error for first byte");
 		}
 		
-		if (write(file_descriptor, &default_config_byte_two, 1) != 1) {
-			perror("Configuration register write error for second byte");
+		if (wrapper_write(file_descriptor, &default_config_byte_two, 1) != 1) {
+			perror("Configuration register wrapper_write error for second byte");
 		}
 	}
 }
@@ -53,12 +53,12 @@ void write_config_register_em(uint8_t data ){
 		default_config_byte_two |= (data << 4);
 		
 		/* Writing data to the configuration register */
-		if (write(file_descriptor, &default_config_byte_one, 1) != 1) {
-			perror("Configuration register write error for first byte");
+		if (wrapper_write(file_descriptor, &default_config_byte_one, 1) != 1) {
+			perror("Configuration register wrapper_write error for first byte");
 		}
 		
-		if (write(file_descriptor, &default_config_byte_two, 1) != 1) {
-			perror("Configuration register write error for second byte");
+		if (wrapper_write(file_descriptor, &default_config_byte_two, 1) != 1) {
+			perror("Configuration register wrapper_write error for second byte");
 		}
 	}
 }
@@ -71,12 +71,12 @@ void write_config_register_conversion_rate(uint8_t data ){
 		default_config_byte_two |= (data << 6);
 		
 		/* Writing data to the configuration register */
-		if (write(file_descriptor, &default_config_byte_one, 1) != 1) {
-			perror("Configuration register write error for first byte");
+		if (wrapper_write(file_descriptor, &default_config_byte_one, 1) != 1) {
+			perror("Configuration register wrapper_write error for first byte");
 		}
 		
-		if (write(file_descriptor, &default_config_byte_two, 1) != 1) {
-			perror("Configuration register write error for second byte");
+		if (wrapper_write(file_descriptor, &default_config_byte_two, 1) != 1) {
+			perror("Configuration register wrapper_write error for second byte");
 		}
 	}
 }
@@ -87,12 +87,12 @@ void write_config_register_default( ){
 	write_pointer_register(I2C_TEMP_SENSOR_CONFIG_REG);
 	
 	/* Writing data to the configuration register */
-	if (write(file_descriptor, &default_config_byte_one, 1) != 1) {
-		perror("Configuration register write error for first byte");
+	if (wrapper_write(file_descriptor, &default_config_byte_one, 1) != 1) {
+		perror("Configuration register wrapper_write error for first byte");
 	}
 	
-	if (write(file_descriptor, &default_config_byte_two, 1) != 1) {
-		perror("Configuration register write error for second byte");
+	if (wrapper_write(file_descriptor, &default_config_byte_two, 1) != 1) {
+		perror("Configuration register wrapper_write error for second byte");
 	}
 }
 
@@ -105,8 +105,8 @@ uint16_t read_temp_high_low_register(int sensor_register){
 	write_pointer_register(sensor_register);
 	
 	/* Reading the Tlow register value */
-	if (read(file_descriptor, data, 1) != 1) {
-		perror("T-low register read error");
+	if (wrapper_read(file_descriptor, data, 1) != 1) {
+		perror("T-low register wrapper_read error");
 	}
 	
 	tlow_output_value = (data[0]<<4 | (data[1] >> 4 & 0XF));
@@ -124,8 +124,8 @@ uint16_t read_temp_config_register(){
 	write_pointer_register(I2C_TEMP_SENSOR_CONFIG_REG);
 	
 	/* Reading the THigh register value */
-	if (read(file_descriptor, data, 1) != 1) {
-		perror("Temperature configuration register read error");
+	if (wrapper_read(file_descriptor, data, 1) != 1) {
+		perror("Temperature configuration register wrapper_read error");
 	}
 	
 	temp_config_value = (data[0]<<8 | data[1]);
@@ -143,8 +143,8 @@ float read_temperature_data_register(int format){
 	write_pointer_register(I2C_TEMP_SENSOR_TEMP_DATA_REG);
 	
 	/* Reading the temperature data register value */
-	if (read(file_descriptor, data, 2) != 2) {
-		perror("Temperature data register read error");
+	if (wrapper_read(file_descriptor, data, 2) != 2) {
+		perror("Temperature data register wrapper_read error");
 	}
 	
 	if(format == TEMP_CELSIUS){
@@ -201,7 +201,7 @@ void *sensor_thread_func(void *arg)
 
         //log_temp_data(temp_data);
 
-        sleep(2);
+        sleep(1);
     } 
 }
 
@@ -295,7 +295,7 @@ void *socket_thread_func(void *arg)
     {
         memset(recv_buffer, '\0', sizeof(recv_buffer));
 
-        size_t num_read_bytes = read(accept_conn_id, &recv_buffer, sizeof(recv_buffer));
+        size_t num_read_bytes = wrapper_read(accept_conn_id, &recv_buffer, sizeof(recv_buffer));
 
         printf("[Temp_Task] Message req api: %s, req recp: %s, req api params: %s\n",
                 (((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg),
@@ -430,7 +430,7 @@ void *socket_hb_thread_func(void *arg)
     {
         memset(recv_buffer, '\0', sizeof(recv_buffer));
 
-        size_t num_read_bytes = read(accept_conn_id, &recv_buffer, sizeof(recv_buffer));
+        size_t num_read_bytes = wrapper_read(accept_conn_id, &recv_buffer, sizeof(recv_buffer));
     
         if (!strcmp(recv_buffer, "heartbeat"))
         {
