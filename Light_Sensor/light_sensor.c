@@ -67,6 +67,10 @@ void power_on_light_sensor(void)
 	int ctrl_reg_val = I2C_LIGHT_SENSOR_CTRL_REG_VAL;
 	
     write_light_sensor_reg(cmd_ctrl_reg_val, ctrl_reg_val);
+	
+	cmd_ctrl_reg_val = I2C_LIGHT_SENSOR_CMD_TIM_REG;
+	ctrl_reg_val = 0X10;
+	write_light_sensor_reg(cmd_ctrl_reg_val, ctrl_reg_val);
 
 }
 
@@ -342,6 +346,44 @@ void *sensor_thread_func(void *arg)
     }
 }
 
+void init_sock(int *sock_fd, struct sockaddr_in *server_addr_struct, 
+               int port_num, int listen_qsize)
+{
+    int serv_addr_len = sizeof(struct sockaddr_in);
+
+    /* Create the socket */
+    if ((*sock_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
+    {
+        perror("socket creation failed");
+        pthread_exit(NULL); // Change these return values from pthread_exit
+    }
+
+    int option = 1;
+    if(setsockopt(*sock_fd, SOL_SOCKET, (SO_REUSEPORT | SO_REUSEADDR), (void *)&option, sizeof(option)) < 0)
+    {
+        perror("setsockopt failed");
+        pthread_exit(NULL);
+    }
+
+    server_addr_struct->sin_family = AF_INET;
+    server_addr_struct->sin_addr.s_addr = INADDR_ANY;
+    server_addr_struct->sin_port = htons(port_num);
+
+    if (bind(*sock_fd, (struct sockaddr *)server_addr_struct,
+								sizeof(struct sockaddr_in))<0)
+    {
+        perror("bind failed");
+        pthread_exit(NULL);
+    }
+
+    if (listen(*sock_fd, listen_qsize) < 0)
+    {
+        perror("listen failed");
+        pthread_exit(NULL);
+    }
+
+}
+
 
 void *socket_hb_thread_func(void *arg)
 {
@@ -448,7 +490,7 @@ float calculate_lux_value(int ch0_data, int ch1_data)
     ** 
     */
 
-    float adc_count_ratio = (float)ch1_data/ch0_data;
+    float adc_count_ratio = (float)(ch1_data/ch0_data);
     if ( 0 < adc_count_ratio <= 0.5)
     {
         sensor_lux_val = ((0.0304 * ch0_data) - (0.062 * ch0_data * pow(adc_count_ratio, 1.4)));
@@ -480,13 +522,13 @@ int write_light_sensor_reg(int cmd_reg_val, int target_reg_val)
     **       1. Target register address for subsequent write operation
     **       2. If I2C write operation is a word or byte operation 
     */
-	if (write(i2c_light_sensor_fd, &cmd_reg_val, 1) != 1)
+	if (wrapper_write(i2c_light_sensor_fd, &cmd_reg_val, 1) != 1)
 	{
 		 perror("Failed to write to the i2c bus.");
          return -1;
     }
 	
-    if(write(i2c_light_sensor_fd, &target_reg_val, 1) != 1){
+    if(wrapper_write(i2c_light_sensor_fd, &target_reg_val, 1) != 1){
 		 perror("Failed to write to the i2c bus.");	
          return -1;
     }
@@ -497,14 +539,14 @@ int write_light_sensor_reg(int cmd_reg_val, int target_reg_val)
 int8_t read_light_sensor_reg(uint8_t read_reg_val)
 {
     /* Write the read register to specify the initiate a read operation */
-	if(write(i2c_light_sensor_fd, &read_reg_val, 1) != 1){
+	if(wrapper_write(i2c_light_sensor_fd, &read_reg_val, 1) != 1){
 		printf("Failed to write to the i2c bus.\n");
         return -1; 
     }
 
     /* Read the value */
     int read_val;
-	if (read(i2c_light_sensor_fd, &read_val, 1) != 1) {
+	if (wrapper_read(i2c_light_sensor_fd, &read_val, 1) != 1) {
 		perror("adc data read error");
         return -1;
 	}

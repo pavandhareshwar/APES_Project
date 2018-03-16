@@ -32,6 +32,7 @@
 #include <sys/socket.h>
 
 #include <mqueue.h>
+#include "wrapper.h"
 
 /*---------------------------------- GLOBALS --------------------------------*/
 char i2c_name[10];
@@ -278,7 +279,7 @@ void *socket_thread_func(void *arg);
  *  @return void
  *
  */
-void *socket_hb_thread_func(void *arg)
+void *socket_hb_thread_func(void *arg);
 
 /**
  *  @brief Create sensor,socket and heartbeat threads for temperature task

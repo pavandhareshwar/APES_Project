@@ -295,7 +295,7 @@ void *socket_thread_func(void *arg)
     {
         memset(recv_buffer, '\0', sizeof(recv_buffer));
 
-        size_t num_read_bytes = wrapper_read(accept_conn_id, &recv_buffer, sizeof(recv_buffer));
+        size_t num_read_bytes = read(accept_conn_id, &recv_buffer, sizeof(recv_buffer));
 
         printf("[Temp_Task] Message req api: %s, req recp: %s, req api params: %s\n",
                 (((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg),
@@ -430,7 +430,7 @@ void *socket_hb_thread_func(void *arg)
     {
         memset(recv_buffer, '\0', sizeof(recv_buffer));
 
-        size_t num_read_bytes = wrapper_read(accept_conn_id, &recv_buffer, sizeof(recv_buffer));
+        size_t num_read_bytes = read(accept_conn_id, &recv_buffer, sizeof(recv_buffer));
     
         if (!strcmp(recv_buffer, "heartbeat"))
         {
