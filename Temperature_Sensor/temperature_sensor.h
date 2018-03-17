@@ -132,7 +132,7 @@ void write_pointer_register(uint8_t value);
  *
  *  @return void
 */
-void write_temp_high_low_register(int sensor_register, uint16_t data );
+void write_temp_high_low_register(int sensor_register, int16_t data );
 
 /**
  *  @brief Write config register of temperature sensor
@@ -213,7 +213,7 @@ uint8_t read_config_register_fault_bits();
  *  @return reg_val   : if register read is successful
  *          -1        : if register read fails
 */
-uint16_t read_temp_high_low_register(int sensor_register);
+int16_t read_temp_high_low_register(int sensor_register);
 
 /**
  *  @brief Read temperature config of temperature sensor

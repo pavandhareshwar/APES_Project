@@ -16,7 +16,7 @@ void write_pointer_register(uint8_t value){
 	}
 }
 
-void write_temp_high_low_register(int sensor_register, uint16_t data ){
+void write_temp_high_low_register(int sensor_register, int16_t data ){
 	
 	/* Writing to the pointer register for reading T_High/T_low register */
 	write_pointer_register(sensor_register);
@@ -26,6 +26,7 @@ void write_temp_high_low_register(int sensor_register, uint16_t data ){
 		perror("T-low register wrapper_write error");
 	}
 }
+
 
 void write_config_register_on_off(uint8_t data ){
 	
@@ -140,10 +141,10 @@ void write_config_register_default( ){
 	}
 }
 
-uint16_t read_temp_high_low_register(int sensor_register){
+int16_t read_temp_high_low_register(int sensor_register){
 	
-	uint16_t tlow_output_value;
-	uint8_t data[1]={0};
+	int16_t tlow_output_value;
+	int8_t data[1]={0};
 	
 	/* Writing to the pointer register for reading Tlow register */
 	write_pointer_register(sensor_register);
@@ -369,7 +370,7 @@ void *socket_thread_func(void *arg)
         }
 		else if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "get_temp_low_data"))
         {
-            uint16_t temp_data = read_temp_high_low_register(I2C_TEMP_SENSOR_TLOW_REG);
+            int16_t temp_data = read_temp_high_low_register(I2C_TEMP_SENSOR_TLOW_REG);
             char temp_data_msg[64];
             memset(temp_data_msg, '\0', sizeof(temp_data_msg));
 
@@ -381,7 +382,31 @@ void *socket_thread_func(void *arg)
         }
 		else if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "get_temp_high_data"))
         {
-            uint16_t temp_data = read_temp_high_low_register(I2C_TEMP_SENSOR_THIGH_REG);
+            int16_t temp_data = read_temp_high_low_register(I2C_TEMP_SENSOR_THIGH_REG);
+            char temp_data_msg[64];
+            memset(temp_data_msg, '\0', sizeof(temp_data_msg));
+
+            sprintf(temp_data_msg, "T_High Data: %d", temp_data);
+
+            ssize_t num_sent_bytes = send(accept_conn_id, temp_data_msg, strlen(temp_data_msg), 0);
+            if (num_sent_bytes < 0)
+                perror("send failed");
+        }
+		else if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "get_temp_em"))
+        {
+            uint8_t temp_data = read_config_register_em();
+            char temp_data_msg[64];
+            memset(temp_data_msg, '\0', sizeof(temp_data_msg));
+
+            sprintf(temp_data_msg, "T_High Data: %d", temp_data);
+
+            ssize_t num_sent_bytes = send(accept_conn_id, temp_data_msg, strlen(temp_data_msg), 0);
+            if (num_sent_bytes < 0)
+                perror("send failed");
+        }
+		else if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "get_temp_conversion_rate"))
+        {
+            uint8_t temp_data = read_config_register_conversion_rate();
             char temp_data_msg[64];
             memset(temp_data_msg, '\0', sizeof(temp_data_msg));
 
@@ -450,6 +475,66 @@ void *socket_thread_func(void *arg)
 				if (num_sent_bytes < 0)
 					perror("send failed");
 			}
+        }
+		else if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "set_temp_high_data"))
+        {
+            if((((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list) != NULL){
+				
+				int16_t data = *(uint8_t *)(((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list);
+				write_temp_high_low_register(I2C_TEMP_SENSOR_THIGH_REG,data);
+				char temp_data_msg[64];
+				memset(temp_data_msg, '\0', sizeof(temp_data_msg));
+
+				sprintf(temp_data_msg, "%s", "Set success");
+
+				ssize_t num_sent_bytes = send(accept_conn_id, temp_data_msg, strlen(temp_data_msg), 0);
+				if (num_sent_bytes < 0)
+					perror("send failed");
+			}
+        }
+		else if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "set_temp_low_data"))
+        {
+            if((((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list) != NULL){
+				
+				int16_t data = *(uint8_t *)(((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list);
+				write_temp_high_low_register(I2C_TEMP_SENSOR_TLOW_REG,data);
+				char temp_data_msg[64];
+				memset(temp_data_msg, '\0', sizeof(temp_data_msg));
+
+				sprintf(temp_data_msg, "%s", "Set success");
+
+				ssize_t num_sent_bytes = send(accept_conn_id, temp_data_msg, strlen(temp_data_msg), 0);
+				if (num_sent_bytes < 0)
+					perror("send failed");
+			}
+        }
+		else if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "set_temp_fault_bits"))
+        {
+            if((((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list) != NULL){
+				
+				uint8_t data = *(uint8_t *)(((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list);
+				write_config_register_fault_bits(data,data);
+				char temp_data_msg[64];
+				memset(temp_data_msg, '\0', sizeof(temp_data_msg));
+
+				sprintf(temp_data_msg, "%s", "Set success");
+
+				ssize_t num_sent_bytes = send(accept_conn_id, temp_data_msg, strlen(temp_data_msg), 0);
+				if (num_sent_bytes < 0)
+					perror("send failed");
+			}
+        }
+		else if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "get_temp_fault_bits"))
+        {
+            uint8_t temp_data = read_config_register_fault_bits();
+            char temp_data_msg[64];
+            memset(temp_data_msg, '\0', sizeof(temp_data_msg));
+
+            sprintf(temp_data_msg, "Conf Data: %d", temp_data);
+
+            ssize_t num_sent_bytes = send(accept_conn_id, temp_data_msg, strlen(temp_data_msg), 0);
+            if (num_sent_bytes < 0)
+                perror("send failed");
         }
     }
 
