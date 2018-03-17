@@ -280,7 +280,7 @@ void init_sock(int *sock_fd, struct sockaddr_in *server_addr_struct,
 
 }
 
-void read_from_logger_msg_queue()
+void read_from_logger_msg_queue(void)
 {
     char recv_buffer[MSG_MAX_LEN];
     memset(recv_buffer, '\0', sizeof(recv_buffer));
@@ -297,7 +297,7 @@ void read_from_logger_msg_queue()
             return;
         }
 
-#if 1
+#if 0
         printf("Message received: %s, msg_src: %s, message level: %s\n", 
             (((struct _logger_msg_struct_ *)&recv_buffer)->message),
             (((struct _logger_msg_struct_ *)&recv_buffer)->logger_msg_src_id),
@@ -351,7 +351,7 @@ void sig_handler(int sig_num)
     }
 }
 
-void logger_task_exit()
+void logger_task_exit(void)
 {
     int mq_close_status = mq_close(logger_mq_handle);
     if (mq_close_status == -1)

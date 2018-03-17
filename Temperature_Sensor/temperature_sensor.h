@@ -218,7 +218,6 @@ uint16_t read_temp_config_register();
 */
 float read_temperature_data_register(int format);
 
-
 /**
  *  @brief Initialize the temperature sensor
  *  
@@ -242,9 +241,6 @@ int temp_sensor_init();
  *  @return void
 */
 void log_temp_data(float temp_data);
-
-
-
 
 /**
  *  @brief Entry point and executing entity for sensor thread

@@ -97,22 +97,100 @@ struct _logger_msg_struct_
 */
 int logger_task_init();
 
+/**
+ *  @brief Read from configuration file for the logger task
+ *
+ *  This function reads the configuration parameters for the logger task file
+ *  and sets-up the logger file as per this configuration
+ *
+ *  @param file     : name of the config file
+ *
+ *  @return void
+ *
+ */
 int read_logger_conf_file(char *file);
 
+/**
+ *  @brief Create logger and hearbeat socket threads for logger task
+ *
+ *  The logger task is made multi-threaded with
+ *     1. logger thread responsible for reading messages from its message queue
+ *        and logging it to a file.
+ *     2. socket heartbeat responsible for communicating with main task,
+ *        to log heartbeat every time its requested by main task.
+ *
+ *  @param void
+ *
+ *  @return 0  : thread creation success
+ *          -1 : thread creation failed
+ *
+ */
 int create_threads(void);
 
+/**
+ *  @brief Entry point and executing entity for logger thread
+ *
+ *  The logger thread starts execution by invoking this function(start_routine)
+ *
+ *  @param arg : argument to start_routine
+ *
+ *  @return void
+ *
+ */
 void *logger_thread_func(void *arg);
 
+/**
+ *  @brief Entry point and executing entity for socket thread
+ *
+ *  The socket thread for heartbeat starts execution by invoking this function(start_routine)
+ *
+ *  @param arg : argument to start_routine
+ *
+ *  @return void
+ *
+ */
 void *socket_hb_thread_func(void *arg);
 
+/**
+ *  @brief Create the socket and initialize
+ *
+ *  This function create the socket for the given socket id.
+ *
+ *  @param sock_fd              : socket file descriptor
+ *         server_addr_struct   : server address of the socket
+ *         port_num             : port number in which the socket is communicating
+ *         listen_qsize         : number of connections the socket is accepting
+ *
+ *  @return void
+*/
 void init_sock(int *sock_fd, struct sockaddr_in *server_addr_struct,
                int port_num, int listen_qsize);
 
+#if 0
 void write_test_msg_to_logger();
+#endif
 
-void read_from_logger_msg_queue();
+/**
+ *  @brief Read message from logger message queue
+ *
+ *  This function will read messages from its message queue and log it to a file 
+ *
+ *  @param void
+ *
+ *  @return void
+*/
+void read_from_logger_msg_queue(void);
 
-void logger_task_exit();
+/**
+ *  @brief Cleanup of the logger sensor
+ *
+ *  This function will close the message queue and the logger file handle 
+ *
+ *  @param void
+ *
+ *  @return void
+*/
+void logger_task_exit(void);
 
 /**
  *  @brief Signal handler for temperature task

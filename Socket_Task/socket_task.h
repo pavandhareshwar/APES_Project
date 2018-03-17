@@ -139,12 +139,59 @@ void initialize_server_socket(struct sockaddr_in *sock_addr_struct,
 void initialize_sensor_task_socket(int *sock_fd, struct sockaddr_in *sock_addr_struct, 
                                     int port_num);
 
+/**
+ *  @brief Create logger and hearbeat socket threads for logger task
+ *
+ *  The socket task is made multi-threaded with
+ *     1. socket thread responsible for communicating with external application 
+ *        and handling request-response for external application
+ *     2. socket heartbeat responsible for communicating with main task,
+ *        to log heartbeat every time its requested by main task.
+ *
+ *  @param void
+ *
+ *  @return 0  : thread creation success
+ *          -1 : thread creation failed
+ *
+ */
 int create_threads(void);
 
+/**
+ *  @brief Entry point and executing entity for socket thread
+ *
+ *  The socket thread starts execution by invoking this function(start_routine)
+ *
+ *  @param arg : argument to start_routine
+ *
+ *  @return void
+ *
+ */
 void *socket_thread_func(void *args);
 
+/**
+ *  @brief Entry point and executing entity for socket thread
+ *
+ *  The socket thread for heartbeat starts execution by invoking this function(start_routine)
+ *
+ *  @param arg : argument to start_routine
+ *
+ *  @return void
+ *
+ */
 void *socket_hb_thread_func(void *arg);
 
+/**
+ *  @brief Create the socket and initialize                                                           
+ *
+ *  This function create the socket for the given socket id.                                          
+ *
+ *  @param sock_fd              : socket file descriptor
+ *         server_addr_struct   : server address of the socket
+ *         port_num             : port number in which the socket is communicating
+ *         listen_qsize         : number of connections the socket is accepting
+ *
+ *  @return void
+*/
 void init_sock(int *sock_fd, struct sockaddr_in *server_addr_struct,
                int port_num, int listen_qsize);
 

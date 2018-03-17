@@ -140,15 +140,120 @@ void check_subtask_status(int sock_fd, char *task_name);
  */
 void check_status_of_sub_tasks(void);
 
-
+/**
+ *  @brief Log unalive message to logger task message queue 
+ *  
+ *  This function logs a message to the logger task message queue if a certain
+ *  process isn't alive when checked for a predefined number of times
+ *
+ *  @param task_name               : name of the subtask
+ *
+ *  @return void
+ *
+ */
 void log_task_unalive_msg_to_log_file(char *task_name);
+
+/**
+ *  @brief Create sub processes 
+ *  
+ *  This function creates the temperature, light, logger and socket sub-procesess
+ *
+ *  @param void
+ *
+ *  @return void
+ *
+ */
 void create_sub_processes(void);
+
+/**
+ *  @brief Create a specific sub process 
+ *  
+ *  This function creates a new task as per the name specified by @param task_name
+ *
+ *  @param task_name                 : name of the subtask 
+ *
+ *  @return void
+ *
+ */
 void create_sub_process(char *process_name);
+
+/**
+ *  @brief Perform start-up tests
+ *  
+ *  This function performs the start-up tests to ensure that the hardware, processes 
+ *  and communication primitivies are working. If any of the start-up test fails, the
+ *  already existing processes and threads are killed and some cleanup is done
+ *
+ *  @param void
+ *
+ *  @return void
+ *
+ */
 void perform_startup_test(void);
+
+/**
+ *  @brief Perform start-up test for a sub task
+ *  
+ *  This function performs the start-up tests to ensure that the hardware, threads 
+ *  and communication primitives of the specified sub task are working.
+ *
+ *  @param sock_fd                     : socket file descriptor
+ *
+ *  @return void
+ *
+ */
 int perform_sub_task_startup_test(int sock_fd);
+
+/**
+ *  @brief Stop entire system 
+ *  
+ *  This function is called when a certain start-up test fails and performs some 
+ *  clean-up and exits. 
+ *
+ *  @param void
+ *
+ *  @return void
+ *
+ */
 void stop_entire_system(void);
+
+/**
+ *  @brief Kill already created processes 
+ *  
+ *  This function kills all the created processes by the main task before the start-up
+ *  test is triggered, as part of clean-up and exit of the entire system.
+ *
+ *  @param void
+ *
+ *  @return void
+ *
+ */
 void kill_already_created_processes(void);
+
+/**
+ *  @brief Turn on user led 
+ *  
+ *  This function turns on a user led on the beagle bone green to indicate of the 
+ *  system failure to start-up
+ *
+ *  @param void
+ *
+ *  @return void
+ *
+ */
 void turn_on_usr_led(void);
+
+/**
+ *  @brief Write pid of created processes to a file 
+ *  
+ *  This function writes the pid of the sub processes created by main task to a file
+ *
+ *  @param proc_name                   : name of the child process
+ *  @param child_pid                   : pid of the child process
+ *
+ *  @return void
+ *
+ */
 void write_pid_to_file(char *proc_name, pid_t child_pid);
 
 /*---------------------------- FUNCTION PROTOTYPES --------------------------*/
