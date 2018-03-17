@@ -179,6 +179,29 @@ void write_config_register_conversion_rate(uint8_t data );
 void write_config_register_default( );
 
 /**
+ *  @brief Write config register of temperature sensor for fault bits
+ *  
+ *  This function will open the i2c bus write operation of fault bits into config register of Temperature sensor.
+ *
+ *  @param data			  	: fault bits
+ *
+ *  @return void
+*/
+void write_config_register_fault_bits(uint8_t data );
+
+/**
+ *  @brief Read temperature fault bits of temperature sensor
+ *  
+ *  This function will open the i2c bus for read of temperature fault bits of Temperature sensor.
+ *
+ *  @param void
+ *
+ *  @return fault_val   : if register read is successful
+ *          -1        : if register read fails
+*/
+uint8_t read_config_register_fault_bits();
+
+/**
  *  @brief Read temperature high and low register of temperature sensor
  *  
  *  This function will open the i2c bus for read of temperature high and
@@ -326,5 +349,6 @@ void init_sock(int *sock_fd, struct sockaddr_in *server_addr_struct,
 */
 
 void sig_handler(int sig_num);
+
 
 #endif // #ifndef _TEMPERATURE_SENSOR_TASK_H_

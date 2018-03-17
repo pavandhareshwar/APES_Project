@@ -81,6 +81,33 @@ void write_config_register_conversion_rate(uint8_t data ){
 	}
 }
 
+void write_config_register_fault_bits(uint8_t data ){
+	
+	/* Writing to the pointer register for configuration register */
+	write_pointer_register(I2C_TEMP_SENSOR_CONFIG_REG);
+	if((data >= 0) || (data <= 3)){
+		default_config_byte_two |= (data << 11);
+		
+		/* Writing data to the configuration register */
+		if (wrapper_write(file_descriptor, &default_config_byte_one, 1) != 1) {
+			perror("Configuration register wrapper_write error for first byte");
+		}
+		
+		if (wrapper_write(file_descriptor, &default_config_byte_two, 1) != 1) {
+			perror("Configuration register wrapper_write error for second byte");
+		}
+	}
+}
+
+uint8_t read_config_register_fault_bits(){
+
+    /* Reading fault bits of temperature config register */
+    uint16_t config_value = read_temp_config_register();
+    uint8_t return_value = (uint8_t)((config_value & 0x1800) >> 11);
+    return return_value;
+
+}
+
 uint8_t read_config_register_em(){
 
     /* Reading em-bit of temperature config register */
