@@ -15,6 +15,7 @@
 #include <errno.h>
 #include <stdint.h>
 #include <string.h>
+#include <time.h>
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -53,6 +54,13 @@
 #define SOCKET_HB_PORT_NUM                   8680
 #define SOCKET_HB_LISTEN_QUEUE_SIZE          10
 
+#define MSG_TYPE_TEMP_DATA                   0
+#define MSG_TYPE_LUX_DATA                    1
+#define MSG_TYPE_SOCK_DATA                   2
+#define MSG_TYPE_MAIN_DATA                   3
+
+#define LOGGER_ATTR_LEN                      32
+
 /*----------------------------------- MACROS --------------------------------*/
 
 /*---------------------------------- GLOBALS --------------------------------*/
@@ -65,18 +73,11 @@ sig_atomic_t g_sig_kill_logger_thread, g_sig_kill_sock_hb_thread;
 /*---------------------------------- GLOBALS --------------------------------*/
 
 /*---------------------------- STRUCTURES/ENUMERATIONS ----------------------*/
-enum _msg_type_
-{
-    MSG_TYPE_TEMP_DATA,
-    MSG_TYPE_LUX_DATA,
-    MSG_TYPE_SOCK_DATA
-};
-
-struct _logger_msg_struct_
-{
-    char message[MSG_MAX_LEN];
-    int msg_len;
-    enum _msg_type_ logger_msg_type;
+struct _logger_msg_struct_                                                                            
+{                                                                                                     
+    char message[MSG_MAX_LEN]; 
+    char logger_msg_src_id[LOGGER_ATTR_LEN];
+    char logger_msg_level[LOGGER_ATTR_LEN];
 };
 
 /*---------------------------- STRUCTURES/ENUMERATIONS ----------------------*/

@@ -20,6 +20,7 @@ int main(void){
         exit(1);
     }
 
+    printf("Creating threads\n");
     int thread_create_status = create_threads();
     if (thread_create_status)
     {
@@ -65,8 +66,10 @@ int light_sensor_init(void)
 		return -1;
 	}
 
+    printf("Powering on light sensor\n");
     /* Power on the APDS-9301 device */
     power_on_light_sensor();
+    printf("Powered on light sensor\n");
 
     return 0;
 }
@@ -122,7 +125,8 @@ void init_light_socket(struct sockaddr_in *sock_addr_struct)
     }
 
     int option = 1;
-    if(setsockopt(server_fd,SOL_SOCKET,(SO_REUSEPORT | SO_REUSEADDR),(void *)&option,sizeof(option)) < 0)
+    if(setsockopt(server_fd, SOL_SOCKET, (SO_REUSEPORT | SO_REUSEADDR),
+                (void *)&option, sizeof(option)) < 0)
     {
         perror("setsockopt failed");
         pthread_exit(NULL);
@@ -353,7 +357,7 @@ void *sensor_thread_func(void *arg)
 
         printf("Sensor lux data: %3.2f\n", sensor_lux_data);
         
-        //log_lux_data(sensor_lux_data);
+        log_lux_data(sensor_lux_data);
         
         sleep(5);
     }
@@ -589,11 +593,14 @@ void log_lux_data(float lux_data)
     memset(lux_data_msg, '\0', sizeof(lux_data_msg));
 
     sprintf(lux_data_msg, "Lux Value: %3.2f", lux_data);
-    
-    struct _logger_msg_struct_ logger_msg = {0};
+  
+    struct _logger_msg_struct_ logger_msg;
+    memset(&logger_msg, '\0', sizeof(logger_msg));
     strcpy(logger_msg.message, lux_data_msg);
-    logger_msg.msg_len = strlen(lux_data_msg);
-    logger_msg.logger_msg_type = MSG_TYPE_LUX_DATA;
+    strcpy(logger_msg.logger_msg_src_id, "Light");                                    
+    logger_msg.logger_msg_src_id[strlen("Light") + 1] = '\0';                                              
+    strncpy(logger_msg.logger_msg_level, "Info", strlen("Info"));                                     
+    logger_msg.logger_msg_level[strlen("Info") + 1] = '\0';
 
     msg_priority = 1;
     int num_sent_bytes = mq_send(logger_mq_handle, (char *)&logger_msg, 

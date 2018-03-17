@@ -66,15 +66,23 @@
 
 #define MSG_MAX_LEN                                  128
 
-#define LIGHT_SENSOR_SERVER_PORT_NUM                 8085
+#define LIGHT_SENSOR_SERVER_PORT_NUM                 8086
 #define LIGHT_SENSOR_LISTEN_QUEUE_SIZE               5
 
 #define MSG_BUFF_MAX_LEN                             1024
 
 #define SOCK_REQ_MSG_API_MSG_LEN                     64
 
-#define SOCKET_HB_PORT_NUM              8660
-#define SOCKET_HB_LISTEN_QUEUE_SIZE     5
+#define SOCKET_HB_PORT_NUM                           8660
+#define SOCKET_HB_LISTEN_QUEUE_SIZE                  5
+
+#define MSG_TYPE_TEMP_DATA                           0
+#define MSG_TYPE_LUX_DATA                            1
+#define MSG_TYPE_SOCK_DATA                           2
+#define MSG_TYPE_MAIN_DATA                           3
+
+#define LOGGER_ATTR_LEN                              32
+
 /*----------------------------------- MACROS --------------------------------*/
 
 /*---------------------------------- GLOBALS --------------------------------*/
@@ -88,17 +96,12 @@ sig_atomic_t g_sig_kill_sensor_thread, g_sig_kill_sock_thread, g_sig_kill_sock_h
 /*---------------------------------- GLOBALS --------------------------------*/
 
 /*---------------------------- STRUCTURES/ENUMERATIONS ----------------------*/
-enum _msg_type_                                                                                       
-{                                                                                                     
-    MSG_TYPE_TEMP_DATA,                                                                               
-    MSG_TYPE_LUX_DATA                                                                                 
-};                                                                                                    
-                                                                                                      
-struct _logger_msg_struct_                                                                            
-{   
+
+struct _logger_msg_struct_
+{
     char message[MSG_MAX_LEN];
-    int msg_len;
-    enum _msg_type_ logger_msg_type;                                                                  
+    char logger_msg_src_id[LOGGER_ATTR_LEN];
+    char logger_msg_level[LOGGER_ATTR_LEN];
 };
 
 enum _req_recipient_

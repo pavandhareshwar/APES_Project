@@ -216,7 +216,7 @@ void *sensor_thread_func(void *arg)
     {
         temp_value = read_temperature_data_register(TEMP_CELSIUS);
 
-        //log_temp_data(temp_data);
+        log_temp_data(temp_value);
 
         sleep(1);
     } 
@@ -243,10 +243,13 @@ void log_temp_data(float temp_data)
 
     sprintf(temp_data_msg, "Temp Value: %3.2f", temp_data);
 
-    struct _logger_msg_struct_ logger_msg = {0};
+    struct _logger_msg_struct_ logger_msg;
+    memset(&logger_msg, '\0', sizeof(logger_msg));
     strcpy(logger_msg.message, temp_data_msg);
-    logger_msg.msg_len = strlen(temp_data_msg);
-    logger_msg.logger_msg_type = MSG_TYPE_TEMP_DATA;
+    strncpy(logger_msg.logger_msg_src_id, "Temp", strlen("Temp"));
+    logger_msg.logger_msg_src_id[strlen("Temp")] = '\0';
+    strncpy(logger_msg.logger_msg_level, "Info", strlen("Info"));
+    logger_msg.logger_msg_level[strlen("Info")] = '\0';
 
     msg_priority = 2;
     int num_sent_bytes = mq_send(logger_mq_handle, (char *)&logger_msg, 
@@ -316,7 +319,7 @@ void *socket_thread_func(void *arg)
     {
         memset(recv_buffer, '\0', sizeof(recv_buffer));
 
-        size_t num_read_bytes = wrapper_read(accept_conn_id, &recv_buffer, sizeof(recv_buffer));
+        size_t num_read_bytes = read(accept_conn_id, &recv_buffer, sizeof(recv_buffer));
 
         printf("[Temp_Task] Message req api: %s, req recp: %s, req api params: %s\n",
                 (((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg),
@@ -454,7 +457,8 @@ void *socket_hb_thread_func(void *arg)
     {
         memset(recv_buffer, '\0', sizeof(recv_buffer));
 
-        size_t num_read_bytes = wrapper_read(accept_conn_id, &recv_buffer, sizeof(recv_buffer));
+        size_t num_read_bytes = read(accept_conn_id, &recv_buffer, sizeof(recv_buffer));
+        printf("********* Recv Buffer :: %s\n", recv_buffer);
     
         if (!strcmp(recv_buffer, "heartbeat"))
         {

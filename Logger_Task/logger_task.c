@@ -182,6 +182,8 @@ void *logger_thread_func(void *arg)
         ** queue and write it to logger file */
         read_from_logger_msg_queue();
     }
+
+    pthread_exit(NULL);
 }
 
 void *socket_hb_thread_func(void *arg)
@@ -220,6 +222,7 @@ void *socket_hb_thread_func(void *arg)
     }
 }
 
+#if 0
 void write_test_msg_to_logger()
 {
     struct _logger_msg_struct_ logger_msg = {0};
@@ -237,6 +240,7 @@ void write_test_msg_to_logger()
     if (num_sent_bytes < 0)
         perror("mq_send failed");
 }
+#endif
 
 void init_sock(int *sock_fd, struct sockaddr_in *server_addr_struct,
                int port_num, int listen_qsize)
@@ -284,30 +288,40 @@ void read_from_logger_msg_queue()
     int msg_priority;
     
     int num_recv_bytes;
-    while (num_recv_bytes = mq_receive(logger_mq_handle, (char *)&recv_buffer,
-                                    MSG_QUEUE_MAX_MSG_SIZE, &msg_priority) != -1)
+    while ((num_recv_bytes = mq_receive(logger_mq_handle, (char *)&recv_buffer,
+                                    MSG_QUEUE_MAX_MSG_SIZE, &msg_priority)) != -1)
     {
         if (num_recv_bytes < 0)
+        {
             perror("mq_receive failed");
+            return;
+        }
 
-        printf("Message received: %s, msg_type: %d, message type: %s\n", 
+#if 1
+        printf("Message received: %s, msg_src: %s, message level: %s\n", 
             (((struct _logger_msg_struct_ *)&recv_buffer)->message),
-            (((struct _logger_msg_struct_ *)&recv_buffer)->logger_msg_type),
-            (((((struct _logger_msg_struct_ *)&recv_buffer)->logger_msg_type) == MSG_TYPE_TEMP_DATA) ?
-             "Temp Data" : ((((struct _logger_msg_struct_ *)&recv_buffer)->logger_msg_type) 
-                 == MSG_TYPE_LUX_DATA) ? "Lux Data" : "Sock Data"));
+            (((struct _logger_msg_struct_ *)&recv_buffer)->logger_msg_src_id),
+            (((struct _logger_msg_struct_ *)&recv_buffer)->logger_msg_level));
+#endif
 
+        time_t tval = time(NULL);
+        struct tm *cur_time = localtime(&tval);
+        
+        char timestamp_str[32];
+        memset(timestamp_str, '\0', sizeof(timestamp_str));
+
+        sprintf(timestamp_str, "%02d:%02d:%02d", cur_time->tm_hour, cur_time->tm_min, cur_time->tm_sec);
+        
         char msg_to_write[LOG_MSG_PAYLOAD_SIZE];
         memset(msg_to_write, '\0', sizeof(msg_to_write));
-        sprintf(msg_to_write, "Message: %s | Message_Type: %s\n", 
-            (((struct _logger_msg_struct_ *)&recv_buffer)->message),
-            (((((struct _logger_msg_struct_ *)&recv_buffer)->logger_msg_type) == MSG_TYPE_TEMP_DATA) ?
-             "TEMP_DATA" : ((((struct _logger_msg_struct_ *)&recv_buffer)->logger_msg_type) == MSG_TYPE_LUX_DATA) ?
-             "LUX_DATA" : "SOCK_DATA"));
+        
+        sprintf(msg_to_write, "Timestamp: %s | Message_Src: %s | Message_Type: %s | Message: %s\n",
+            timestamp_str, (((struct _logger_msg_struct_ *)&recv_buffer)->logger_msg_src_id),
+            (((struct _logger_msg_struct_ *)&recv_buffer)->logger_msg_level),
+            (((struct _logger_msg_struct_ *)&recv_buffer)->message));
 
         printf("Message to write: %s\n", msg_to_write);
         int num_written_bytes = write(logger_fd, msg_to_write, strlen(msg_to_write));
-        printf("num_written_bytes: %d\n", num_written_bytes);
     }
 
 }
@@ -320,9 +334,9 @@ void sig_handler(int sig_num)
     if (sig_num == SIGINT || sig_num == SIGUSR1)
     {   
         if (sig_num == SIGINT)
-            printf("Caught signal %s in temperature task\n", "SIGINT");
+            printf("Caught signal %s in logger task\n", "SIGINT");
         else if (sig_num == SIGUSR1)
-            printf("Caught signal %s in temperature task\n", "SIGKILL");
+            printf("Caught signal %s in logger task\n", "SIGKILL");
         
         g_sig_kill_logger_thread = 1;
         g_sig_kill_sock_hb_thread = 1;

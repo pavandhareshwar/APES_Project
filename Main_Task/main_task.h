@@ -64,6 +64,8 @@
 #define SOCKET_TASK_EXEC_NAME               "./socket_task &"
 #define LOGGER_TASK_EXEC_NAME               "./logger_task &"
 
+#define LOGGER_ATTR_LEN                     32
+
 /*----------------------------------- MACROS --------------------------------*/
 
 /*---------------------------------- GLOBALS --------------------------------*/
@@ -79,19 +81,12 @@ int logger_task_unalive_count, socket_task_unalive_count;
 /*---------------------------------- GLOBALS --------------------------------*/
 
 /*---------------------------- STRUCTURES/ENUMERATIONS ----------------------*/
-enum _msg_type_                                                                                       
-{                                                                                                     
-    MSG_TYPE_TEMP_DATA,                                                                               
-    MSG_TYPE_LUX_DATA,
-    MSG_TYPE_MAIN_DATA
-};                                                                                                    
-                                                                                                      
 struct _logger_msg_struct_                                                                            
-{   
-    char message[MSG_MAX_LEN];
-    int msg_len;
-    enum _msg_type_ logger_msg_type;                                                                  
-};
+{                                                                                                     
+    char message[MSG_MAX_LEN]; 
+    char logger_msg_src_id[LOGGER_ATTR_LEN];
+    char logger_msg_level[LOGGER_ATTR_LEN];
+}; 
 
 /*---------------------------- STRUCTURES/ENUMERATIONS ----------------------*/
 

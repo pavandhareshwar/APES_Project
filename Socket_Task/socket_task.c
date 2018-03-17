@@ -5,6 +5,7 @@ int main(void)
 	/* Creating a socket that is exposed to the external application */
     initialize_server_socket(&server_addr, SERVER_PORT_NUM, SERVER_LISTEN_QUEUE_SIZE);
 
+#if 1
     initialize_sensor_task_socket(&temp_sockfd, &temp_sock_addr, TEMPERATURE_TASK_PORT_NUM);
 
     if (connect(temp_sockfd, (struct sockaddr *)&temp_sock_addr, sizeof(temp_sock_addr)) < 0)
@@ -13,14 +14,18 @@ int main(void)
         printf("\nConnection Failed for temperature task \n");
         return -1;
     }
-   
+#endif
+
+#if 0
     initialize_sensor_task_socket(&light_sockfd, &light_sock_addr, LIGHT_TASK_PORT_NUM);
 
     if (connect(light_sockfd, (struct sockaddr *)&light_sock_addr, sizeof(light_sock_addr)) < 0)
     {
+        perror("connect failed");
         printf("\nConnection Failed for light task \n");
         return -1;
     }
+#endif
 
     int thread_create_status = create_threads();
     if (thread_create_status)
@@ -300,10 +305,12 @@ void log_req_msg(char *req_msg)
 
     sprintf(sock_data_msg, "Req Msg: %s", req_msg);
 
-    struct _logger_msg_struct_ logger_msg = {0};
-    strcpy(logger_msg.message, sock_data_msg);
-    logger_msg.msg_len = strlen(sock_data_msg);
-    logger_msg.logger_msg_type = MSG_TYPE_SOCK_DATA;
+    struct _logger_msg_struct_ logger_msg;
+    memset(&logger_msg, '\0', sizeof(logger_msg));
+    strncpy(logger_msg.logger_msg_src_id, "Socket", strlen("Socket"));                                    
+    logger_msg.logger_msg_src_id[strlen("Socket")] = '\0';                                              
+    strncpy(logger_msg.logger_msg_level, "Info", strlen("Info"));                                     
+    logger_msg.logger_msg_level[strlen("Info")] = '\0';
 
     msg_priority = 1;
     int num_sent_bytes = mq_send(logger_mq_handle, (char *)&logger_msg,
@@ -320,9 +327,9 @@ void sig_handler(int sig_num)
     if (sig_num == SIGINT || sig_num == SIGUSR1)
     {
         if (sig_num == SIGINT)
-            printf("Caught signal %s in temperature task\n", "SIGINT");
+            printf("Caught signal %s in socket task\n", "SIGINT");
         else if (sig_num == SIGUSR1)
-            printf("Caught signal %s in temperature task\n", "SIGKILL");
+            printf("Caught signal %s in socket task\n", "SIGKILL");
 
         g_sig_kill_sock_thread = 1;
         g_sig_kill_sock_hb_thread = 1;

@@ -74,6 +74,8 @@ mqd_t logger_mq_handle;
 #define SOCKET_HB_PORT_NUM              8650
 #define SOCKET_HB_LISTEN_QUEUE_SIZE     5
 
+#define LOGGER_ATTR_LEN                 32
+
 /*---------------------------- STRUCTURES/ENUMERATIONS ----------------------*/
 
 typedef enum{
@@ -84,17 +86,11 @@ typedef enum{
 	
 }tempformat_e;
 
-enum _msg_type_                                                                                       
-{                                                                                                     
-    MSG_TYPE_TEMP_DATA,                                                                               
-    MSG_TYPE_LUX_DATA                                                                                 
-};                                                                                                    
-                                                                                                      
 struct _logger_msg_struct_                                                                            
 {   
     char message[MSG_MAX_LEN];
-    int msg_len;
-    enum _msg_type_ logger_msg_type;                                                                  
+    char logger_msg_src_id[LOGGER_ATTR_LEN];
+    char logger_msg_level[LOGGER_ATTR_LEN];
 };
 
 enum _req_recipient_

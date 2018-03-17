@@ -38,7 +38,7 @@
 #define TEMPERATURE_TASK_PORT_NUM 			8081
 #define TEMPERATURE_TASK_QUEUE_SIZE			100
 
-#define LIGHT_TASK_PORT_NUM 			    8085
+#define LIGHT_TASK_PORT_NUM 			    8086
 #define LIGHT_TASK_QUEUE_SIZE			    100
 
 #define SENSOR_TASK_SOCK_IP_ADDR            "127.0.0.1"   
@@ -56,6 +56,14 @@
 
 #define SOCKET_HB_PORT_NUM                  8670
 #define SOCKET_HB_LISTEN_QUEUE_SIZE         10
+
+#define MSG_TYPE_TEMP_DATA                  0                                                                               
+#define MSG_TYPE_LUX_DATA                   1                                                             
+#define MSG_TYPE_SOCK_DATA                  2                                                             
+#define MSG_TYPE_MAIN_DATA                  3
+
+#define LOGGER_ATTR_LEN                     32
+
 /*----------------------------------- MACROS --------------------------------*/
 
 /*---------------------------------- GLOBALS --------------------------------*/
@@ -83,18 +91,11 @@ struct _socket_req_msg_struct_
     void *ptr_param_list;
 };
 
-enum _msg_type_                                                                                       
-{                                                                                                     
-    MSG_TYPE_TEMP_DATA,                                                                               
-    MSG_TYPE_LUX_DATA,
-    MSG_TYPE_SOCK_DATA
-};                                                                                                    
-                                                                                                      
-struct _logger_msg_struct_                                                                            
-{   
+struct _logger_msg_struct_
+{
     char message[MSG_MAX_LEN];
-    int msg_len;
-    enum _msg_type_ logger_msg_type;                                                                  
+    char logger_msg_src_id[LOGGER_ATTR_LEN];
+    char logger_msg_level[LOGGER_ATTR_LEN];
 };
 
 /*---------------------------- STRUCTURES/ENUMERATIONS ----------------------*/

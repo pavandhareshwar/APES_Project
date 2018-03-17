@@ -26,7 +26,7 @@ int main(void)
         sem_unlink("wrapper_sem");
     }
 
-    sleep(1);
+    sleep(3);
 
     /* Create and initialize temperature task socket */
     initialize_sub_task_socket(&temp_task_sockfd, &temp_task_sock_addr, TEMP_TASK_PORT_NUM);
@@ -37,7 +37,7 @@ int main(void)
         return -1;
     }
 
-#if 0
+#if 1
     /* Create and initialize light task socket */
     initialize_sub_task_socket(&light_task_sockfd, &light_task_sock_addr, LIGHT_TASK_PORT_NUM);
 
@@ -46,6 +46,7 @@ int main(void)
         printf("\nConnection Failed for light task \n");
         return -1;
     }
+#endif
     
     /* Create and initialize socket task socket */
     initialize_sub_task_socket(&socket_task_sockfd, &socket_task_sock_addr, SOCKET_TASK_PORT_NUM);
@@ -64,16 +65,15 @@ int main(void)
         printf("\nConnection Failed for logger task \n");
         return -1;
     }
-#endif 
   
     sleep(2);
 
-    printf("Performing system start-up test\n");
-    perform_startup_test();
+    //printf("Performing system start-up test\n");
+    //perform_startup_test();
 
     while(1)
     {
-        //check_status_of_sub_tasks();
+        check_status_of_sub_tasks();
 
         sleep(10);
     }
@@ -91,28 +91,31 @@ void create_sub_processes(void)
         fclose(fp_pid_file);
         remove("pid_info_file.txt");
     }
+    
+    /* Creating logger task */
+    memset(sub_process_name, '\0', sizeof(sub_process_name));
+    strcpy(sub_process_name, "logger"); 
+    create_sub_process(sub_process_name);
 
     /* Creating temperature sensor task */
     memset(sub_process_name, '\0', sizeof(sub_process_name));
     strcpy(sub_process_name, "temperature"); 
     create_sub_process(sub_process_name);
-   
-#if 0
+  
+#if 1
     /* Creating light sensor task */
     memset(sub_process_name, '\0', sizeof(sub_process_name));
     strcpy(sub_process_name, "light"); 
     create_sub_process(sub_process_name);
+#endif
+
+    sleep(2);
 
     /* Creating socket task */
     memset(sub_process_name, '\0', sizeof(sub_process_name));
     strcpy(sub_process_name, "socket"); 
     create_sub_process(sub_process_name);
 
-    /* Creating logger task */
-    memset(sub_process_name, '\0', sizeof(sub_process_name));
-    strcpy(sub_process_name, "logger"); 
-    create_sub_process(sub_process_name);
-#endif
 }
 
 void create_sub_process(char *process_name)
@@ -513,6 +516,7 @@ void kill_already_created_processes(void)
 void turn_on_usr_led(void)
 {
     printf("Turning on USR led\n");
+
 }
 
 void log_task_unalive_msg_to_log_file(char *task_name)
@@ -531,11 +535,14 @@ void log_task_unalive_msg_to_log_file(char *task_name)
     memset(main_task_data_msg, '\0', sizeof(main_task_data_msg));
 
     sprintf(main_task_data_msg, "%s task not alive", task_name);
-    
-    struct _logger_msg_struct_ logger_msg = {0};
+  
+    struct _logger_msg_struct_ logger_msg;
+    memset(&logger_msg, '\0', sizeof(logger_msg));
     strcpy(logger_msg.message, main_task_data_msg);
-    logger_msg.msg_len = strlen(main_task_data_msg);
-    logger_msg.logger_msg_type = MSG_TYPE_MAIN_DATA;
+    strncpy(logger_msg.logger_msg_src_id, "Main", strlen("Main"));                                    
+    logger_msg.logger_msg_src_id[strlen("Main")] = '\0';                                              
+    strncpy(logger_msg.logger_msg_level, "Error", strlen("Error"));                                     
+    logger_msg.logger_msg_level[strlen("Error")] = '\0';
 
     msg_priority = 1;
     int num_sent_bytes = mq_send(logger_mq_handle, (char *)&logger_msg, 
