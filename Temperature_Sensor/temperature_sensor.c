@@ -82,22 +82,20 @@ void write_config_register_conversion_rate(uint8_t data ){
 }
 
 uint8_t read_config_register_em(){
-	
-	/* Reading em-bit of temperature config register */
-	uint16_t config_value = read_temp_config_register();
-	uint8_t return_value = (config_value >> 4) & 1;
-	return return_value;
-	
+
+    /* Reading em-bit of temperature config register */
+    uint16_t config_value = read_temp_config_register();
+    uint8_t return_value = (config_value >> 4) & 1;
+    return return_value;
+
 }
 
 uint8_t read_config_register_conversion_rate(){
-	
-	/* Reading conversion rate of temperature config register */
-	uint16_t config_value = read_temp_config_register();
-	uint8_t return_value = (uint8_t)((config_value & 0x00C0) >> 6);
-	return return_value;
-	
-	
+
+    /* Reading conversion rate of temperature config register */
+    uint16_t config_value = read_temp_config_register();
+    uint8_t return_value = (uint8_t)((config_value & 0x00C0) >> 6);
+    return return_value;
 }
 
 void write_config_register_default( ){
@@ -214,7 +212,7 @@ void *sensor_thread_func(void *arg)
 	write_config_register_default();
 	float temp_value;
    
-    while (1)
+    while (!g_sig_kill_sensor_thread)
     {
         temp_value = read_temperature_data_register(TEMP_CELSIUS);
 
@@ -222,6 +220,10 @@ void *sensor_thread_func(void *arg)
 
         sleep(1);
     } 
+
+    pthread_exit(NULL);
+
+    return NULL;
 }
 
 void log_temp_data(float temp_data)
@@ -234,7 +236,7 @@ void log_temp_data(float temp_data)
                                         .mq_msgsize = MSG_QUEUE_MAX_MSG_SIZE  // Max. message size
     };
 
-    mqd_t logger_mq_handle = mq_open(MSG_QUEUE_NAME, O_RDWR, S_IRWXU, &logger_mq_attr);
+    logger_mq_handle = mq_open(MSG_QUEUE_NAME, O_RDWR, S_IRWXU, &logger_mq_attr);
 
     char temp_data_msg[MSG_MAX_LEN];
     memset(temp_data_msg, '\0', sizeof(temp_data_msg));
@@ -310,11 +312,11 @@ void *socket_thread_func(void *arg)
     
     char recv_buffer[MSG_BUFF_MAX_LEN];
     
-    while (1)
+    while (!g_sig_kill_sock_thread)
     {
         memset(recv_buffer, '\0', sizeof(recv_buffer));
 
-        size_t num_read_bytes = read(accept_conn_id, &recv_buffer, sizeof(recv_buffer));
+        size_t num_read_bytes = wrapper_read(accept_conn_id, &recv_buffer, sizeof(recv_buffer));
 
         printf("[Temp_Task] Message req api: %s, req recp: %s, req api params: %s\n",
                 (((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg),
@@ -419,8 +421,12 @@ void *socket_thread_func(void *arg)
 					perror("send failed");
 			}
         }
-		
     }
+
+    printf("Calling pthread_exit in sock thread\n");
+    pthread_exit(NULL);
+
+    return NULL;
 }
 
 void *socket_hb_thread_func(void *arg)
@@ -430,7 +436,6 @@ void *socket_hb_thread_func(void *arg)
     int sock_hb_addr_len = sizeof(sock_hb_address);
 
     init_sock(&sock_hb_fd, &sock_hb_address, SOCKET_HB_PORT_NUM, SOCKET_HB_LISTEN_QUEUE_SIZE);
-
 
     int accept_conn_id;
     printf("Waiting for request...\n");
@@ -445,11 +450,11 @@ void *socket_hb_thread_func(void *arg)
     char send_buffer[20];
     memset(send_buffer, '\0', sizeof(send_buffer));
     
-    while (1)
+    while (!g_sig_kill_sock_hb_thread)
     {
         memset(recv_buffer, '\0', sizeof(recv_buffer));
 
-        size_t num_read_bytes = read(accept_conn_id, &recv_buffer, sizeof(recv_buffer));
+        size_t num_read_bytes = wrapper_read(accept_conn_id, &recv_buffer, sizeof(recv_buffer));
     
         if (!strcmp(recv_buffer, "heartbeat"))
         {
@@ -474,7 +479,40 @@ void *socket_hb_thread_func(void *arg)
         }
     }
 
+    printf("Calling pthread_exit in sock hb thread\n");
+    pthread_exit(NULL);
+
+    return NULL;
 }
+
+void sig_handler(int sig_num)
+{
+	char buffer[MSG_BUFF_MAX_LEN];
+	memset(buffer, '\0', sizeof(buffer));
+
+	if (sig_num == SIGINT || sig_num == SIGUSR1)
+	{
+        if (sig_num == SIGINT)
+            printf("Caught signal %s in temperature task\n", "SIGINT");
+        else if (sig_num == SIGUSR1)
+            printf("Caught signal %s in temperature task\n", "SIGKILL");
+   
+        g_sig_kill_sensor_thread = 1;
+        g_sig_kill_sock_thread = 1;
+        g_sig_kill_sock_hb_thread = 1;
+	
+        //pthread_join(sensor_thread_id, NULL);
+        //pthread_join(socket_thread_id, NULL);
+        //pthread_join(socket_hb_thread_id, NULL);
+
+        mq_close(logger_mq_handle);     
+
+        close(file_descriptor);
+
+        exit(0);
+    }
+}
+
 int create_threads()
 {
     int sens_t_creat_ret_val = pthread_create(&sensor_thread_id, NULL, &sensor_thread_func, NULL);
@@ -526,8 +564,19 @@ int main()
         printf("Thread creation success\n");
     }
 
+    if (signal(SIGINT, sig_handler) == SIG_ERR)
+        printf("SigHandler setup for SIGINT failed\n");
+    
+    if (signal(SIGUSR1, sig_handler) == SIG_ERR)
+        printf("SigHandler setup for SIGKILL failed\n");
+
+    g_sig_kill_sensor_thread = 0;
+    g_sig_kill_sock_thread = 0;
+    g_sig_kill_sock_hb_thread = 0;
+
     pthread_join(sensor_thread_id, NULL);
     pthread_join(socket_thread_id, NULL);
+    pthread_join(socket_hb_thread_id, NULL);
 
     close(file_descriptor);
 

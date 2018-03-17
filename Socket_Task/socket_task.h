@@ -17,6 +17,7 @@
 
 #include <unistd.h>
 #include <pthread.h>
+#include <signal.h>
 
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -61,6 +62,10 @@
 int server_sockfd, temp_sockfd, light_sockfd;
 struct sockaddr_in server_addr, temp_sock_addr, light_sock_addr;
 pthread_t socket_thread_id, socket_hb_thread_id;
+
+sig_atomic_t g_sig_kill_sock_thread, g_sig_kill_sock_hb_thread;
+
+mqd_t logger_mq_handle;
 
 /*---------------------------------- GLOBALS --------------------------------*/
 
@@ -152,6 +157,20 @@ void init_sock(int *sock_fd, struct sockaddr_in *server_addr_struct,
  *  @return void
 */
 void log_req_msg(char *req_msg);
+
+/**
+ *  @brief Signal handler for temperature task
+ *
+ *  This function handles the reception of SIGKILL and SIGINT signal to the
+ *  temperature task and terminates all the threads, closes the I2C file descriptor
+ *  and logger message queue handle and exits.
+ *
+ *  @param sig_num              : signal number
+ *
+ *  @return void
+*/
+
+void sig_handler(int sig_num);
 /*---------------------------- FUNCTION PROTOTYPES --------------------------*/
 
 #endif // _SOCKET_TASK_H_

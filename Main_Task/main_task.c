@@ -12,7 +12,7 @@ int main(void)
 {
 	char buffer[BUFF_SIZE];
 
-    //create_sub_processes();
+    create_sub_processes();
 
     sem_t *shared_sem;
 
@@ -26,6 +26,7 @@ int main(void)
         sem_unlink("wrapper_sem");
     }
 
+    sleep(1);
 
     /* Create and initialize temperature task socket */
     initialize_sub_task_socket(&temp_task_sockfd, &temp_task_sock_addr, TEMP_TASK_PORT_NUM);
@@ -64,8 +65,11 @@ int main(void)
         return -1;
     }
 #endif 
-    
-    //perform_startup_test();
+  
+    sleep(2);
+
+    printf("Performing system start-up test\n");
+    perform_startup_test();
 
     while(1)
     {
@@ -81,27 +85,34 @@ void create_sub_processes(void)
 {
     char sub_process_name[32];
 
-#if 0
+    FILE *fp_pid_file = fopen("pid_info_file.txt", "r");
+    if (fp_pid_file)
+    {
+        fclose(fp_pid_file);
+        remove("pid_info_file.txt");
+    }
+
     /* Creating temperature sensor task */
     memset(sub_process_name, '\0', sizeof(sub_process_name));
     strcpy(sub_process_name, "temperature"); 
     create_sub_process(sub_process_name);
-    
+   
+#if 0
     /* Creating light sensor task */
     memset(sub_process_name, '\0', sizeof(sub_process_name));
     strcpy(sub_process_name, "light"); 
     create_sub_process(sub_process_name);
-    
+
     /* Creating socket task */
     memset(sub_process_name, '\0', sizeof(sub_process_name));
     strcpy(sub_process_name, "socket"); 
     create_sub_process(sub_process_name);
-#endif
 
     /* Creating logger task */
     memset(sub_process_name, '\0', sizeof(sub_process_name));
     strcpy(sub_process_name, "logger"); 
     create_sub_process(sub_process_name);
+#endif
 }
 
 void create_sub_process(char *process_name)
@@ -115,24 +126,31 @@ void create_sub_process(char *process_name)
         /* Child Process */
         if (!strcmp(process_name, "temperature"))
         {    
-            char *args[]={TEMP_SENSOR_TASK_EXEC_NAME, NULL};
+            write_pid_to_file(process_name, getpid());
+            printf("Creating temperature task\n");
+            //char *args[]={LOGGER_TASK_EXEC_NAME, NULL};
+            char *args[]={"./temp_task", "&", NULL};
             execvp(args[0],args);
         }
         else if (!strcmp(process_name, "light"))
         {    
-            char *args[]={LIGHT_SENSOR_TASK_EXEC_NAME, NULL};
+            write_pid_to_file(process_name, getpid());
+            printf("Creating light task\n");
+            char *args[]={"./light_task", "&", NULL};
             execvp(args[0],args);
         }
         else if (!strcmp(process_name, "socket"))
         {    
-            char *args[]={SOCKET_TASK_EXEC_NAME, NULL};
+            write_pid_to_file(process_name, getpid());
+            printf("Creating socket task\n");
+            char *args[]={"./socket_task", "&", NULL};
             execvp(args[0],args);
         }
         else if (!strcmp(process_name, "logger"))
         {    
+            write_pid_to_file(process_name, getpid());
             printf("Creating logger task\n");
-            //char *args[]={LOGGER_TASK_EXEC_NAME, NULL};
-            char *args[]={"./logger_task", NULL};
+            char *args[]={"./logger_task", "&", NULL};
             execvp(args[0],args);
         }
     }
@@ -149,6 +167,33 @@ void create_sub_process(char *process_name)
   
     return;
 
+}
+
+void write_pid_to_file(char *proc_name, pid_t child_pid)
+{
+    FILE *fp_pid_file = fopen("pid_info_file.txt", "r");
+    char pid_info_str[64];
+    memset(pid_info_str, '\0', sizeof(pid_info_str));
+    
+    if (fp_pid_file == NULL)
+    {
+        fp_pid_file = fopen("pid_info_file.txt", "w");
+        
+        sprintf(pid_info_str, "%s task: %d\n", proc_name, (int)child_pid);
+        fwrite(pid_info_str, strlen(pid_info_str), sizeof(char), fp_pid_file);
+        
+        fclose(fp_pid_file);
+    }
+    else
+    {
+        fclose(fp_pid_file);
+        fp_pid_file = fopen("pid_info_file.txt", "a");
+        
+        sprintf(pid_info_str, "%s task: %d\n", proc_name, (int)child_pid);
+        fwrite(pid_info_str, strlen(pid_info_str), sizeof(char), fp_pid_file);
+        
+        fclose(fp_pid_file);
+    }
 }
 
 void initialize_sub_task_socket(int *sock_fd, struct sockaddr_in *sock_addr_struct, int port_num)
@@ -174,7 +219,15 @@ void initialize_sub_task_socket(int *sock_fd, struct sockaddr_in *sock_addr_stru
 
     struct timeval rcv_timeout;
     rcv_timeout.tv_sec = 5;
-    if (setsockopt(*sock_fd, SOL_SOCKET, (SO_SNDTIMEO | SO_RCVTIMEO), (struct timeval *)&rcv_timeout,sizeof(struct timeval)) < 0)
+    rcv_timeout.tv_usec = 0;
+    if (setsockopt(*sock_fd, SOL_SOCKET, SO_SNDTIMEO, (struct timeval *)&rcv_timeout,sizeof(struct timeval)) < 0)
+    {
+        perror("setsockopt for send timeout set failed");
+        close(*sock_fd);
+        exit(EXIT_FAILURE);
+    }
+    
+    if (setsockopt(*sock_fd, SOL_SOCKET, SO_RCVTIMEO, (struct timeval *)&rcv_timeout,sizeof(struct timeval)) < 0)
     {
         perror("setsockopt for recv timeout set failed");
         close(*sock_fd);
@@ -275,7 +328,7 @@ void perform_startup_test(void)
     if (temp_task_st_status != 0)
         stop_entire_system();
 
-#if 0
+#if 0    
     /* Check the light sensor task, hardware and I2C */
     int light_task_st_status = perform_sub_task_startup_test(light_task_sockfd);     
     if (light_task_st_status != 0)
@@ -339,6 +392,122 @@ void stop_entire_system(void)
 void kill_already_created_processes(void)
 {
     printf("Killing already created processes\n");
+    
+    FILE *fp_pid_info_file = fopen("./pid_info_file.txt", "r");
+    if (fp_pid_info_file == NULL)
+    {
+        perror("file open failed");
+        printf("File %s open failed\n", "pid_info_file.txt");
+        return;
+    }
+    else
+    {
+        printf("pid info file opened success\n");
+    }
+
+    char *buffer;
+    size_t num_bytes = 120;
+    char colon_delimiter[] = ":";
+    ssize_t bytes_read;
+
+    buffer = (char *)malloc(num_bytes*sizeof(char));
+
+    while ((bytes_read = getline(&buffer, &num_bytes, fp_pid_info_file)) != -1)
+    {
+        char *token = strtok(buffer, colon_delimiter);
+
+        if (!strcmp(token, "temperature task"))
+        {
+            token = strtok(NULL, colon_delimiter);
+            printf("Killing temperature task\n");
+            int pid_to_kill = atoi(token);
+            
+            /* We wanted to kill the temperature process here by sending a SIGKILL,
+            ** but since we could not setup a signal handler for SIGKILL, we are 
+            ** sending a SIGSTOP instead and trying to handle SIGUSR1 in the 
+            ** temperature process */
+            kill(pid_to_kill, SIGUSR1);
+            
+            int status;
+            pid_t end_id = waitpid(pid_to_kill, &status, 0);
+            if (end_id == pid_to_kill)
+            {
+                if (WIFEXITED(status))
+                    printf("Temperature task successfully killed\n");
+            }
+            else
+            {
+                perror("Temperature task: waitpid error\n");
+            }
+        }
+        else if (!strcmp(token, "light task"))
+        {
+            token = strtok(NULL, colon_delimiter);
+            printf("Killing light task\n");
+            int pid_to_kill = atoi(token);
+            
+            kill(pid_to_kill, SIGUSR1);
+            
+            int status;
+            pid_t end_id = waitpid(pid_to_kill, &status, 0);
+            if (end_id == pid_to_kill)
+            {
+                if (WIFEXITED(status))
+                    printf("Light task successfully killed\n");
+            }
+            else
+            {
+                perror("Light task: waitpid error\n");
+            }
+
+        }
+        else if (!strcmp(token, "logger task"))
+        {
+            token = strtok(NULL, colon_delimiter);
+            printf("Killing logger task\n");
+            int pid_to_kill = atoi(token);
+            
+            kill(pid_to_kill, SIGUSR1);
+            
+            int status;
+            pid_t end_id = waitpid(pid_to_kill, &status, 0);
+            if (end_id == pid_to_kill)
+            {
+                if (WIFEXITED(status))
+                    printf("Logger task successfully killed\n");
+            }
+            else
+            {
+                perror("Logger task: waitpid error\n");
+            }
+        }
+        else if (!strcmp(token, "socket task"))
+        {
+            token = strtok(NULL, colon_delimiter);
+            printf("Killing socket task\n");
+            int pid_to_kill = atoi(token);
+            
+            kill(pid_to_kill, SIGUSR1);
+            
+            int status;
+            pid_t end_id = waitpid(pid_to_kill, &status, 0);
+            if (end_id == pid_to_kill)
+            {
+                if (WIFEXITED(status))
+                    printf("Socket task successfully killed\n");
+            }
+            else
+            {
+                perror("Socket task: waitpid error\n");
+            }
+        }
+    }
+
+    if (buffer)
+        free(buffer);
+
+    if (fp_pid_info_file)
+        fclose(fp_pid_info_file);
 }
 
 void turn_on_usr_led(void)

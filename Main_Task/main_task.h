@@ -16,6 +16,7 @@
 #include <string.h>
 
 #include <unistd.h>
+#include <signal.h>
 
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -153,6 +154,7 @@ int perform_sub_task_startup_test(int sock_fd);
 void stop_entire_system(void);
 void kill_already_created_processes(void);
 void turn_on_usr_led(void);
+void write_pid_to_file(char *proc_name, pid_t child_pid);
 
 /*---------------------------- FUNCTION PROTOTYPES --------------------------*/
 

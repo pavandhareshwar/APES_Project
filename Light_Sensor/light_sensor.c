@@ -30,8 +30,19 @@ int main(void){
         printf("Thread creation success\n");
     }
 
+    if (signal(SIGINT, sig_handler) == SIG_ERR)
+        printf("SigHandler setup for SIGINT failed\n");
+
+    if (signal(SIGUSR1, sig_handler) == SIG_ERR)
+        printf("SigHandler setup for SIGKILL failed\n");
+
+    g_sig_kill_sensor_thread = 0;
+    g_sig_kill_sock_thread = 0;
+    g_sig_kill_sock_hb_thread = 0;
+
     pthread_join(sensor_thread_id, NULL);
     pthread_join(socket_thread_id, NULL);
+    pthread_join(socket_hb_thread_id, NULL);
 
 	light_sensor_exit();
 
@@ -153,7 +164,7 @@ void *socket_thread_func(void *arg)
         //pthread_exit(NULL);
     }
 
-    while (1)
+    while (!g_sig_kill_sock_thread)
     {
         memset(recv_buffer, '\0', sizeof(recv_buffer));
 
@@ -330,11 +341,13 @@ void *socket_thread_func(void *arg)
             printf("Invalid request from socket task\n");
         }
     }
+
+    pthread_exit(NULL);
 }
 
 void *sensor_thread_func(void *arg)
 {
-    while (1)
+    while (!g_sig_kill_sensor_thread)
     {
         float sensor_lux_data = get_lux_data();
 
@@ -344,6 +357,8 @@ void *sensor_thread_func(void *arg)
         
         sleep(5);
     }
+
+    pthread_exit(NULL);
 }
 
 void init_sock(int *sock_fd, struct sockaddr_in *server_addr_struct, 
@@ -406,7 +421,7 @@ void *socket_hb_thread_func(void *arg)
     char recv_buffer[MSG_BUFF_MAX_LEN];
     char send_buffer[] = "Alive";
     
-    while (1)
+    while (!g_sig_kill_sock_hb_thread)
     {
         memset(recv_buffer, '\0', sizeof(recv_buffer));
 
@@ -420,13 +435,14 @@ void *socket_hb_thread_func(void *arg)
         }
     }
 
+    pthread_exit(NULL);
 }
 
 float get_lux_data(void)
 {
     float sensor_lux_val = 0;
 
-    int adc_ch0_data, adc_ch1_data; 
+    uint16_t adc_ch0_data, adc_ch1_data; 
 
     get_adc_channel_data(0, &adc_ch0_data);
     get_adc_channel_data(1, &adc_ch1_data);
@@ -438,7 +454,7 @@ float get_lux_data(void)
     return sensor_lux_val;
 }
 
-void get_adc_channel_data(int channel_num, int *ch_data)
+void get_adc_channel_data(int channel_num, uint16_t *ch_data)
 {
     if (channel_num == 0)
     {
@@ -472,7 +488,7 @@ void get_adc_channel_data(int channel_num, int *ch_data)
     }
 }
 
-float calculate_lux_value(int ch0_data, int ch1_data)
+float calculate_lux_value(uint16_t ch0_data, uint16_t ch1_data)
 {
     float sensor_lux_val = 0;
     
@@ -567,7 +583,7 @@ void log_lux_data(float lux_data)
                                       .mq_msgsize = MSG_QUEUE_MAX_MSG_SIZE  // Max. message size
                                     };
 
-    mqd_t logger_mq_handle = mq_open(MSG_QUEUE_NAME, O_RDWR, S_IRWXU, &logger_mq_attr);
+    logger_mq_handle = mq_open(MSG_QUEUE_NAME, O_RDWR, S_IRWXU, &logger_mq_attr);
 
     char lux_data_msg[128];
     memset(lux_data_msg, '\0', sizeof(lux_data_msg));
@@ -584,6 +600,35 @@ void log_lux_data(float lux_data)
                             sizeof(logger_msg), msg_priority);
     if (num_sent_bytes < 0)
         perror("mq_send failed");
+}
+
+void sig_handler(int sig_num)                                                                         
+{
+    char buffer[MSG_BUFF_MAX_LEN];
+    memset(buffer, '\0', sizeof(buffer));                                                             
+
+    if (sig_num == SIGINT || sig_num == SIGUSR1)
+    {                                                                                                 
+        if (sig_num == SIGINT)
+            printf("Caught signal %s in light task\n", "SIGINT");
+        else if (sig_num == SIGUSR1)
+            printf("Caught signal %s in light task\n", "SIGKILL");                              
+   
+        g_sig_kill_sensor_thread = 1;
+        g_sig_kill_sock_thread = 1;
+        g_sig_kill_sock_hb_thread = 1;
+                                                                                                      
+        //pthread_join(sensor_thread_id, NULL);                                                       
+        //pthread_join(socket_thread_id, NULL);                                                       
+        //pthread_join(socket_hb_thread_id, NULL);                                                    
+
+        mq_close(logger_mq_handle);                                                                   
+
+        if (i2c_light_sensor_fd != -1)
+            close(i2c_light_sensor_fd);
+                                                                                                      
+        exit(0);                                                                                      
+    }
 }
 
 void light_sensor_exit(void)

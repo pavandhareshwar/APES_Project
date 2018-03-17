@@ -32,6 +32,15 @@ int main(void)
         printf("Thread creation success\n");
     }
 
+    if (signal(SIGINT, sig_handler) == SIG_ERR)
+        printf("SigHandler setup for SIGINT failed\n");
+
+    if (signal(SIGUSR1, sig_handler) == SIG_ERR)
+        printf("SigHandler setup for SIGKILL failed\n");
+
+    g_sig_kill_sock_thread = 0;
+    g_sig_kill_sock_hb_thread = 0;
+
     pthread_join(socket_thread_id, NULL);
     pthread_join(socket_hb_thread_id, NULL);
 
@@ -139,7 +148,7 @@ void *socket_thread_func(void *args)
     }
 
     char recv_buffer[BUFF_SIZE];
-	while(1)
+	while(!g_sig_kill_sock_thread)
     {
         memset(recv_buffer, '\0', sizeof(recv_buffer));
         int num_recv_bytes = recv(accept_conn_id, recv_buffer, sizeof(recv_buffer), 0);
@@ -195,6 +204,7 @@ void *socket_thread_func(void *args)
         }
 	}
 
+    pthread_exit(NULL);
 }
 
 void *socket_hb_thread_func(void *arg)
@@ -217,7 +227,7 @@ void *socket_hb_thread_func(void *arg)
     char recv_buffer[MSG_BUFF_MAX_LEN];
     char send_buffer[] = "Alive";
     
-    while (1)
+    while (!g_sig_kill_sock_hb_thread)
     {
         memset(recv_buffer, '\0', sizeof(recv_buffer));
 
@@ -225,11 +235,14 @@ void *socket_hb_thread_func(void *arg)
     
         if (!strcmp(recv_buffer, "heartbeat"))
         {
-			ssize_t num_sent_bytes = send(accept_conn_id, send_buffer, strlen(send_buffer), 0);
+            ssize_t num_sent_bytes = send(accept_conn_id, send_buffer, strlen(send_buffer), 0);
             if (num_sent_bytes < 0)
                 perror("send failed");
         }
     }
+
+    pthread_exit(NULL);
+
 }
 
 void init_sock(int *sock_fd, struct sockaddr_in *server_addr_struct,
@@ -280,7 +293,7 @@ void log_req_msg(char *req_msg)
                                       .mq_msgsize = MSG_QUEUE_MAX_MSG_SIZE  // Max. message size
                                     };
 
-    mqd_t logger_mq_handle = mq_open(MSG_QUEUE_NAME, O_RDWR, S_IRWXU, &logger_mq_attr);
+    logger_mq_handle = mq_open(MSG_QUEUE_NAME, O_RDWR, S_IRWXU, &logger_mq_attr);
 
     char sock_data_msg[MSG_MAX_LEN];
     memset(sock_data_msg, '\0', sizeof(sock_data_msg));
@@ -297,4 +310,29 @@ void log_req_msg(char *req_msg)
                             sizeof(logger_msg), msg_priority);
     if (num_sent_bytes < 0)
         perror("mq_send failed");
+}
+
+void sig_handler(int sig_num)
+{
+    char buffer[MSG_BUFF_MAX_LEN];
+    memset(buffer, '\0', sizeof(buffer));
+
+    if (sig_num == SIGINT || sig_num == SIGUSR1)
+    {
+        if (sig_num == SIGINT)
+            printf("Caught signal %s in temperature task\n", "SIGINT");
+        else if (sig_num == SIGUSR1)
+            printf("Caught signal %s in temperature task\n", "SIGKILL");
+
+        g_sig_kill_sock_thread = 1;
+        g_sig_kill_sock_hb_thread = 1;
+
+        //pthread_join(sensor_thread_id, NULL);
+        //pthread_join(socket_thread_id, NULL);
+        //pthread_join(socket_hb_thread_id, NULL);
+
+        mq_close(logger_mq_handle);
+
+        exit(0);
+    }
 }

@@ -17,6 +17,7 @@
 
 #include <unistd.h>
 #include <fcntl.h>
+#include <signal.h>
 
 #include <linux/i2c-dev.h>
 
@@ -81,6 +82,9 @@ int i2c_light_sensor_fd;
 int server_fd, accept_conn_id;
 int sensor_thread_id, socket_thread_id, socket_hb_thread_id;
 
+mqd_t logger_mq_handle;
+
+sig_atomic_t g_sig_kill_sensor_thread, g_sig_kill_sock_thread, g_sig_kill_sock_hb_thread;
 /*---------------------------------- GLOBALS --------------------------------*/
 
 /*---------------------------- STRUCTURES/ENUMERATIONS ----------------------*/
@@ -266,7 +270,7 @@ int8_t read_light_sensor_reg(uint8_t read_reg_val);
  *
  *  @return void 
 */
-void get_adc_channel_data(int channel_num, int *ch_data);
+void get_adc_channel_data(int channel_num, uint16_t *ch_data);
 
 /**
  *  @brief Calculate the lux value
@@ -278,7 +282,7 @@ void get_adc_channel_data(int channel_num, int *ch_data);
  *
  *  @return void 
 */
-float calculate_lux_value(int ch0_data, int ch1_data);
+float calculate_lux_value(uint16_t ch0_data, uint16_t ch1_data);
 
 /**
  *  @brief Log the lux value
@@ -317,6 +321,20 @@ void light_sensor_exit(void);
 */
 void init_sock(int *sock_fd, struct sockaddr_in *server_addr_struct, 
                int port_num, int listen_qsize);
+
+/**
+ *  @brief Signal handler for temperature task
+ *  
+ *  This function handles the reception of SIGKILL and SIGINT signal to the 
+ *  temperature task and terminates all the threads, closes the I2C file descriptor
+ *  and logger message queue handle and exits.
+ *
+ *  @param sig_num              : signal number
+ *
+ *  @return void
+*/
+
+void sig_handler(int sig_num);
 /*---------------------------- FUNCTION PROTOTYPES --------------------------*/
 
 #endif

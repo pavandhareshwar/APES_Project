@@ -10,6 +10,8 @@
 
 int main(void)
 {
+    printf("In Logger task\n");
+        
     int init_status = logger_task_init();
     if (init_status == -1)
     {
@@ -28,6 +30,15 @@ int main(void)
     {
         printf("Thread creation success\n");
     }
+
+    if (signal(SIGINT, sig_handler) == SIG_ERR)
+        printf("SigHandler setup for SIGINT failed\n");
+
+    if (signal(SIGUSR1, sig_handler) == SIG_ERR)
+        printf("SigHandler setup for SIGKILL failed\n");
+
+    g_sig_kill_logger_thread = 0;
+    g_sig_kill_sock_hb_thread = 0;
 
     pthread_join(logger_thread_id, NULL);
     pthread_join(socket_hb_thread_id, NULL);
@@ -48,8 +59,8 @@ int logger_task_init()
                                     };
 
 
-    logger_msg_queue = mq_open(MSG_QUEUE_NAME, O_CREAT | O_RDWR, S_IRWXU, &logger_mq_attr);
-    if (logger_msg_queue < 0)
+    logger_mq_handle = mq_open(MSG_QUEUE_NAME, O_CREAT | O_RDWR, S_IRWXU, &logger_mq_attr);
+    if (logger_mq_handle < 0)
     {
         perror("Logger message queue create failed");
         return -1;
@@ -165,7 +176,7 @@ int create_threads(void)
 
 void *logger_thread_func(void *arg)
 {
-    while(1)
+    while(!g_sig_kill_logger_thread)
     {
         /* This function will continously read from the logger task message 
         ** queue and write it to logger file */
@@ -194,7 +205,7 @@ void *socket_hb_thread_func(void *arg)
     char recv_buffer[MSG_BUFF_MAX_LEN];
     char send_buffer[] = "Alive";
 
-    while (1)
+    while (!g_sig_kill_sock_hb_thread)
     {
         memset(recv_buffer, '\0', sizeof(recv_buffer));
 
@@ -220,7 +231,7 @@ void write_test_msg_to_logger()
     logger_msg.logger_msg_type = MSG_TYPE_TEMP_DATA;
 
     int msg_priority = 1;
-    int num_sent_bytes = mq_send(logger_msg_queue, (char *)&logger_msg, 
+    int num_sent_bytes = mq_send(logger_mq_handle, (char *)&logger_msg, 
                                     sizeof(logger_msg), msg_priority);
 
     if (num_sent_bytes < 0)
@@ -273,7 +284,7 @@ void read_from_logger_msg_queue()
     int msg_priority;
     
     int num_recv_bytes;
-    while (num_recv_bytes = mq_receive(logger_msg_queue, (char *)&recv_buffer,
+    while (num_recv_bytes = mq_receive(logger_mq_handle, (char *)&recv_buffer,
                                     MSG_QUEUE_MAX_MSG_SIZE, &msg_priority) != -1)
     {
         if (num_recv_bytes < 0)
@@ -301,9 +312,34 @@ void read_from_logger_msg_queue()
 
 }
 
+void sig_handler(int sig_num)
+{   
+    char buffer[MSG_BUFF_MAX_LEN];
+    memset(buffer, '\0', sizeof(buffer));
+    
+    if (sig_num == SIGINT || sig_num == SIGUSR1)
+    {   
+        if (sig_num == SIGINT)
+            printf("Caught signal %s in temperature task\n", "SIGINT");
+        else if (sig_num == SIGUSR1)
+            printf("Caught signal %s in temperature task\n", "SIGKILL");
+        
+        g_sig_kill_logger_thread = 1;
+        g_sig_kill_sock_hb_thread = 1;
+        
+        //pthread_join(sensor_thread_id, NULL);
+        //pthread_join(socket_thread_id, NULL);
+        //pthread_join(socket_hb_thread_id, NULL);
+        
+        mq_close(logger_mq_handle);
+        
+        exit(0);
+    }
+}
+
 void logger_task_exit()
 {
-    int mq_close_status = mq_close(logger_msg_queue);
+    int mq_close_status = mq_close(logger_mq_handle);
     if (mq_close_status == -1)
         perror("Logger message queue close failed");
 

@@ -19,6 +19,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <signal.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -55,9 +56,11 @@
 /*----------------------------------- MACROS --------------------------------*/
 
 /*---------------------------------- GLOBALS --------------------------------*/
-mqd_t logger_msg_queue;
+mqd_t logger_mq_handle;
 int logger_fd;
 pthread_t logger_thread_id, socket_hb_thread_id;
+
+sig_atomic_t g_sig_kill_logger_thread, g_sig_kill_sock_hb_thread;
 
 /*---------------------------------- GLOBALS --------------------------------*/
 
@@ -110,4 +113,17 @@ void read_from_logger_msg_queue();
 
 void logger_task_exit();
 
+/**
+ *  @brief Signal handler for temperature task
+ *
+ *  This function handles the reception of SIGKILL and SIGINT signal to the
+ *  temperature task and terminates all the threads, closes the I2C file descriptor
+ *  and logger message queue handle and exits.
+ *
+ *  @param sig_num              : signal number
+ *
+ *  @return void
+*/
+
+void sig_handler(int sig_num);
 #endif // _LOGGER_TASK_H_

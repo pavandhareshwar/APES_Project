@@ -19,7 +19,7 @@ sem_t *get_named_semaphore_handle(void)
     }
     else                                                                                              
     {
-        printf("Named semaphore created successfully\n");
+        //printf("Named semaphore created successfully\n");
         return sem;
     }   
 }

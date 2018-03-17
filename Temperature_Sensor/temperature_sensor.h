@@ -16,10 +16,12 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <stdint.h>
 #include <linux/i2c-dev.h>
 #include <fcntl.h>
+
+#include <unistd.h>
+#include <signal.h>
 
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -42,6 +44,9 @@ int default_config_byte_one = 0X50;
 int default_config_byte_two = 0XA0;
 
 int temp_sensor_initialized;
+
+sig_atomic_t g_sig_kill_sensor_thread, g_sig_kill_sock_thread, g_sig_kill_sock_hb_thread;
+mqd_t logger_mq_handle;
 
 /*----------------------------------- MACROS --------------------------------*/
 
@@ -176,30 +181,6 @@ void write_config_register_conversion_rate(uint8_t data );
  *  @return void
 */
 void write_config_register_default( );
-
-/**
- *  @brief Read temperature configuration em-bit of temperature sensor
- *  
- *  This function will open the i2c bus for read of configuration register.
- *
- *  @param None
- *
- *  @return reg_val   : if register read is successful
- *          -1        : if register read fails
-*/
-uint8_t read_config_register_em();
-
-/**
- *  @brief Read temperature configuration conversion rate of temperature sensor
- *  
- *  This function will open the i2c bus for read of configuration register.
- *
- *  @param None
- *
- *  @return reg_val   : if register read is successful
- *          -1        : if register read fails
-*/
-uint8_t read_config_register_conversion_rate();
 
 /**
  *  @brief Read temperature high and low register of temperature sensor
@@ -339,5 +320,19 @@ int create_threads(void);
 */
 void init_sock(int *sock_fd, struct sockaddr_in *server_addr_struct, 
                int port_num, int listen_qsize);
+
+/**
+ *  @brief Signal handler for temperature task
+ *  
+ *  This function handles the reception of SIGKILL and SIGINT signal to the 
+ *  temperature task and terminates all the threads, closes the I2C file descriptor
+ *  and logger message queue handle and exits.
+ *
+ *  @param sig_num     			: signal number
+ *
+ *  @return void
+*/
+
+void sig_handler(int sig_num);
 
 #endif // #ifndef _TEMPERATURE_SENSOR_TASK_H_
