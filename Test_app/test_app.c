@@ -1,12 +1,12 @@
 /***************************************************************************
 * Author:       Pavan Dhareshwar & Sridhar Pavithrapu
 * Date:         03/10/2018
-* File:         external_app.c
+* File:         test_app.c
 * Description:  Source file containing the functionality and implementation
 *               of external application
 ***************************************************************************/
 
-#include "external_app.h"
+#include "test_app.h"
 
 int main(void)
 {

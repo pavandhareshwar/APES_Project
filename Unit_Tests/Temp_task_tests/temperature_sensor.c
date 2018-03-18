@@ -9,6 +9,9 @@
 #include "temperature_sensor.h"
 #include "wrapper.h"
 
+int default_config_byte_one = 0X60;
+int default_config_byte_two = 0XA0;
+
 void write_pointer_register(uint8_t value){
 
 	if (wrapper_write(file_descriptor, &value, 1) != 1) {

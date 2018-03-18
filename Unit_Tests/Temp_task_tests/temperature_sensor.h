@@ -40,8 +40,7 @@
 char i2c_name[10];
 int sensor_thread_id, socket_thread_id, socket_hb_thread_id;
 int file_descriptor;
-int default_config_byte_one = 0X60;
-int default_config_byte_two = 0XA0;
+
 
 int temp_sensor_initialized;
 
@@ -324,5 +323,7 @@ void init_sock(int *sock_fd, struct sockaddr_in *server_addr_struct,
 */
 
 void sig_handler(int sig_num);
+uint8_t read_config_register_em();
+uint8_t read_config_register_conversion_rate();
 
 #endif // #ifndef _TEMPERATURE_SENSOR_TASK_H_
