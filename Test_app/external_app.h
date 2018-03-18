@@ -48,15 +48,23 @@ struct _socket_req_msg_struct_
 {
     char req_api_msg[SOCK_REQ_MSG_API_MSG_LEN];
     enum _req_recipient_ req_recipient;
-    void *ptr_param_list;
+    int params;
 };
 
+#if 0
 struct _int_thresh_reg_struct_
 {
     uint8_t thresh_low_low;
     uint8_t thresh_low_high;
     uint8_t thresh_high_low;
     uint8_t thresh_high_high;
+};
+#endif
+
+struct _int_thresh_reg_struct_
+{
+    uint16_t low_thresh;
+    uint16_t high_thresh;
 };
 
 /*---------------------------- STRUCTURES/ENUMERATIONS ----------------------*/

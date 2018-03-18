@@ -2,10 +2,11 @@
 
 int main(void)
 {
-	/* Creating a socket that is exposed to the external application */
+    socket_task_initialized = 0;
+
+    /* Creating a socket that is exposed to the external application */
     initialize_server_socket(&server_addr, SERVER_PORT_NUM, SERVER_LISTEN_QUEUE_SIZE);
 
-#if 1
     initialize_sensor_task_socket(&temp_sockfd, &temp_sock_addr, TEMPERATURE_TASK_PORT_NUM);
 
     if (connect(temp_sockfd, (struct sockaddr *)&temp_sock_addr, sizeof(temp_sock_addr)) < 0)
@@ -14,9 +15,7 @@ int main(void)
         printf("\nConnection Failed for temperature task \n");
         return -1;
     }
-#endif
 
-#if 0
     initialize_sensor_task_socket(&light_sockfd, &light_sock_addr, LIGHT_TASK_PORT_NUM);
 
     if (connect(light_sockfd, (struct sockaddr *)&light_sock_addr, sizeof(light_sock_addr)) < 0)
@@ -25,7 +24,6 @@ int main(void)
         printf("\nConnection Failed for light task \n");
         return -1;
     }
-#endif
 
     int thread_create_status = create_threads();
     if (thread_create_status)
@@ -36,6 +34,8 @@ int main(void)
     {
         printf("Thread creation success\n");
     }
+
+    socket_task_initialized = 1;
 
     if (signal(SIGINT, sig_handler) == SIG_ERR)
         printf("SigHandler setup for SIGINT failed\n");
@@ -87,7 +87,6 @@ void initialize_server_socket(struct sockaddr_in *sock_addr_struct,
 		perror("listen");
 		exit(EXIT_FAILURE);
 	}
-
 }
 
 void initialize_sensor_task_socket(int *sock_fd, struct sockaddr_in *sock_addr_struct, int port_num)
@@ -167,19 +166,20 @@ void *socket_thread_func(void *args)
 
             if (*(((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg) != '\0')
             {
-                printf("Message req api: %s, req recp: %s, req api params: %s\n",
+                printf("Message req api: %s, req recp: %s, req api params: %d\n",
                         (((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg),
                         ((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_recipient) 
                          == REQ_RECP_TEMP_TASK ? "Temp Task" : "Light Task"),
-                        (((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list != NULL ?
-                         "Non NULL" : "NULL"));
+                        (((struct _socket_req_msg_struct_ *)&recv_buffer)->params));
 
                 //log_req_msg((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg));
 
+                size_t sent_bytes;
                 memset(buffer, '\0', sizeof(buffer));
                 //strncpy(buffer, "Hello!", strlen("Hello!"));
-   
-                size_t sent_bytes;
+               
+                uint8_t data = (uint8_t)(((struct _socket_req_msg_struct_ *)&recv_buffer)->params);
+ 
                 if ((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_recipient) 
                         == REQ_RECP_TEMP_TASK)
                 {
@@ -200,8 +200,13 @@ void *socket_thread_func(void *args)
                     ssize_t num_recv_bytes = recv(light_sockfd, buffer, sizeof(buffer), 0);
                     if (num_recv_bytes < 0)
                         perror("recv failed");
-                    //strncpy(buffer, "Hello!", strlen("Hello!"));
-                    sent_bytes = send(accept_conn_id, buffer, strlen(buffer), 0);
+                    printf("Received %d bytes in socket task\n", num_recv_bytes);
+
+                    sent_bytes = send(accept_conn_id, buffer, num_recv_bytes, 0);
+                    if (sent_bytes < 0)
+                        perror("send failed");
+                    else
+                        printf("Sent %d bytes from socket task to test app\n", sent_bytes);
                 }
                 
                 //sent_bytes = send(accept_conn_id, buffer, sizeof(buffer), 0 );
@@ -240,6 +245,20 @@ void *socket_hb_thread_func(void *arg)
     
         if (!strcmp(recv_buffer, "heartbeat"))
         {
+            ssize_t num_sent_bytes = send(accept_conn_id, send_buffer, strlen(send_buffer), 0);
+            if (num_sent_bytes < 0)
+                perror("send failed");
+        }
+        else if (!strcmp(recv_buffer, "startup_check"))
+        {
+            /* For the sake of start-up check, because we have the temperature sensor initialized
+            ** by the time this thread is spawned. So we perform a "get_temp_data" call to see if
+            ** everything is working fine */
+            if (socket_task_initialized == 1)
+                strcpy(send_buffer, "Initialized");
+            else
+                strcpy(send_buffer, "Uninitialized");
+
             ssize_t num_sent_bytes = send(accept_conn_id, send_buffer, strlen(send_buffer), 0);
             if (num_sent_bytes < 0)
                 perror("send failed");
