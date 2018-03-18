@@ -225,8 +225,10 @@ void *socket_thread_func(void *arg)
         {
             if (((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list != NULL)
             {
-                uint8_t cmd_ctrl_reg_val = *(uint8_t *)(((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list);
-
+				#if 0
+					uint8_t cmd_ctrl_reg_val = *(uint8_t *)(((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list);
+				#endif
+				uint8_t cmd_ctrl_reg_val = (((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list);
                 if (write_ctrl_reg(cmd_ctrl_reg_val) == 0)
                 {
                     memset(light_sensor_rsp_msg, '\0', sizeof(light_sensor_rsp_msg));
@@ -252,6 +254,7 @@ void *socket_thread_func(void *arg)
             if (num_sent_bytes < 0)
                 perror("send failed");
         }
+		#if 0
         else if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "set_light_sensor_tim_reg"))
         {
             if (((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list != NULL)
@@ -272,6 +275,78 @@ void *socket_thread_func(void *arg)
                     }
             }
         }
+		#endif
+		else if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "set_light_sensor_integration_time"))
+        {
+            if (((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list != NULL)
+            {
+         
+                uint8_t cmd_tim_reg_val = read_timing_reg();
+                uint8_t cmd_tim_field_val = (((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list);
+
+                if (write_timing_reg(cmd_tim_reg_val, 0x3, cmd_tim_field_val) == 0)
+                {
+                    memset(light_sensor_rsp_msg, '\0', sizeof(light_sensor_rsp_msg));
+
+                    sprintf(light_sensor_rsp_msg, "OK");
+                    ssize_t num_sent_bytes = send(accept_conn_id, light_sensor_rsp_msg, strlen(light_sensor_rsp_msg), 0);
+                    if (num_sent_bytes < 0)
+                        perror("send failed");
+                    }
+            }
+        }
+		else if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "set_light_sensor_gain"))
+        {
+            if (((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list != NULL)
+            {
+         
+                uint8_t cmd_tim_reg_val = read_timing_reg();
+                uint8_t cmd_tim_field_val = (((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list);
+
+                if (write_timing_reg(cmd_tim_reg_val, 0x10, cmd_tim_field_val) == 0)
+                {
+                    memset(light_sensor_rsp_msg, '\0', sizeof(light_sensor_rsp_msg));
+
+                    sprintf(light_sensor_rsp_msg, "OK");
+                    ssize_t num_sent_bytes = send(accept_conn_id, light_sensor_rsp_msg, strlen(light_sensor_rsp_msg), 0);
+                    if (num_sent_bytes < 0)
+                        perror("send failed");
+                    }
+            }
+        }
+		else if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "set_interrupt_low_threshold"))
+        {
+            if (((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list != NULL)
+            {
+         
+            
+                uint16_t low_thresh = (((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list);
+
+                write_intr_low_thresh_reg(low_thresh);
+
+                sprintf(light_sensor_rsp_msg, "OK");
+                ssize_t num_sent_bytes = send(accept_conn_id, light_sensor_rsp_msg, strlen(light_sensor_rsp_msg), 0);
+                if (num_sent_bytes < 0)
+                    perror("send failed");
+            }
+        }
+		else if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "set_interrupt_high_threshold"))
+        {
+            if (((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list != NULL)
+            {
+         
+            
+                uint16_t high_thresh = (((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list);
+
+                write_intr_high_thresh_reg(high_thresh);
+
+                sprintf(light_sensor_rsp_msg, "OK");
+                ssize_t num_sent_bytes = send(accept_conn_id, light_sensor_rsp_msg, strlen(light_sensor_rsp_msg), 0);
+                if (num_sent_bytes < 0)
+                    perror("send failed");
+            }
+        }
+		
         else if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "get_light_sensor_int_thresh_reg"))
         {
 #if 0
@@ -311,14 +386,14 @@ void *socket_thread_func(void *arg)
             if (num_sent_bytes < 0)
                 perror("send failed");
         }
+#if 0
         else if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "set_light_sensor_int_thresh_reg"))
         {
             if (((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list != NULL)
             {
                 struct _int_thresh_reg_struct_ *p_int_thresh_reg_struct = 
                     (struct _int_thresh_reg_struct_ *)(((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list);
-
-#if 0
+	#if 0
                 uint8_t cmd_thresh_low_low_reg = I2C_LIGHT_SENSOR_CMD_THRESH_LOW_LOW_REG;
                 uint8_t cmd_thresh_low_low_reg_val = (uint8_t)p_int_thresh_reg_struct->thresh_low_low;
                 write_light_sensor_reg(cmd_thresh_low_low_reg, cmd_thresh_low_low_reg_val);
@@ -334,7 +409,7 @@ void *socket_thread_func(void *arg)
                 uint8_t cmd_thresh_high_high_reg = I2C_LIGHT_SENSOR_CMD_THRESH_HIGH_HIGH_REG;
                 uint8_t cmd_thresh_high_high_reg_val = (uint8_t)p_int_thresh_reg_struct->thresh_high_high;
                 write_light_sensor_reg(cmd_thresh_high_high_reg, cmd_thresh_high_high_reg_val);
-#endif
+	#endif
                
                 uint16_t low_thresh = p_int_thresh_reg_struct->low_thresh;
                 uint16_t high_thresh = p_int_thresh_reg_struct->high_thresh;
@@ -347,6 +422,7 @@ void *socket_thread_func(void *arg)
                     perror("send failed");
             }
         }
+#endif
         else
         {
             printf("Invalid request from socket task\n");
@@ -692,7 +768,22 @@ int write_timing_reg(uint8_t tim_reg_val, uint8_t field_to_set, uint8_t field_va
 {
     uint8_t cmd_tim_reg = I2C_LIGHT_SENSOR_CMD_TIM_REG;
     int ret_val = -1;
+	
+	uint8_t time_reg_val_copy = tim_reg_val;
+	time_reg_val_copy &= ~field_to_set;
+	time_reg_val_copy |= (field_val << 4);
 
+	if (write_light_sensor_reg(cmd_tim_reg, time_reg_val_copy) == 0)
+	{
+		ret_val = 0;
+	}
+	else
+	{
+		ret_val = -1;
+	}
+	return ret_val;
+	
+	#if 0
     if (field_to_set & 0x3 == 0x3)
     {
         /* Setting integration time */
@@ -728,6 +819,7 @@ int write_timing_reg(uint8_t tim_reg_val, uint8_t field_to_set, uint8_t field_va
         return ret_val;
 
     }
+	#endif
 
 }
 
@@ -781,6 +873,29 @@ void read_intr_thresh_reg(uint16_t *low_thresh, uint16_t *high_thresh)
     *high_thresh = (light_sen_thresh_high_high_reg_val << 8 | light_sen_thresh_high_low_reg_val);
 }
 
+void write_intr_high_thresh_reg(uint16_t high_thresh)
+{
+	uint8_t cmd_thresh_high_low_reg = I2C_LIGHT_SENSOR_CMD_THRESH_HIGH_LOW_REG;
+    uint8_t cmd_thresh_high_low_reg_val = (uint8_t)high_thresh & 0xFF;
+    write_light_sensor_reg(cmd_thresh_high_low_reg, cmd_thresh_high_low_reg_val);
+
+    uint8_t cmd_thresh_high_high_reg = I2C_LIGHT_SENSOR_CMD_THRESH_HIGH_HIGH_REG;
+    uint8_t cmd_thresh_high_high_reg_val = (uint8_t)((high_thresh >> 8) & 0xFF);
+    write_light_sensor_reg(cmd_thresh_high_high_reg, cmd_thresh_high_high_reg_val);
+}
+
+void write_intr_low_thresh_reg(uint16_t low_thresh)
+{
+	uint8_t cmd_thresh_low_low_reg = I2C_LIGHT_SENSOR_CMD_THRESH_LOW_LOW_REG;
+    uint8_t cmd_thresh_low_low_reg_val = (uint8_t)low_thresh & 0xFF;
+    write_light_sensor_reg(cmd_thresh_low_low_reg, cmd_thresh_low_low_reg_val);
+
+    uint8_t cmd_thresh_low_high_reg = I2C_LIGHT_SENSOR_CMD_THRESH_LOW_HIGH_REG;
+    uint8_t cmd_thresh_low_high_reg_val = (uint8_t)((low_thresh >> 8) & 0xFF);
+    write_light_sensor_reg(cmd_thresh_low_high_reg, cmd_thresh_low_high_reg_val);
+}
+
+#if 0
 void write_intr_thresh_reg(uint16_t low_thresh, uint16_t high_thresh)
 {
     uint8_t cmd_thresh_low_low_reg = I2C_LIGHT_SENSOR_CMD_THRESH_LOW_LOW_REG;
@@ -800,6 +915,7 @@ void write_intr_thresh_reg(uint16_t low_thresh, uint16_t high_thresh)
     write_light_sensor_reg(cmd_thresh_high_high_reg, cmd_thresh_high_high_reg_val);
 
 }
+#endif
 
 void light_sensor_exit(void)
 {

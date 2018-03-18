@@ -460,6 +460,9 @@ void read_intr_thresh_reg(uint16_t *low_thresh, uint16_t *high_thresh);
  *  @return void 
 */
 void write_intr_thresh_reg(uint16_t low_thresh, uint16_t high_thresh);
+
+void write_intr_high_thresh_reg(uint16_t high_thresh);
+void write_intr_low_thresh_reg(uint16_t low_thresh);
 /*---------------------------- FUNCTION PROTOTYPES --------------------------*/
 
 #endif
