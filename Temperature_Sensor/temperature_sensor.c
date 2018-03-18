@@ -208,7 +208,7 @@ uint16_t read_temp_config_register(){
     printf("data[0]: %d, data[1]:%d\n", data[0], data[1]);
 	
 	temp_config_value = (((int16_t)data[0])<<8 | ((int16_t)data[1]));
-	printf("Temperature configuration register value is: %f \n", temp_config_value);
+	printf("Temperature configuration register value is: %d \n", temp_config_value);
 	return temp_config_value;
 	
 }
@@ -276,9 +276,9 @@ void *sensor_thread_func(void *arg)
    
     while (!g_sig_kill_sensor_thread)
     {
-        //temp_value = read_temperature_data_register(TEMP_CELSIUS);
+        temp_value = read_temperature_data_register(TEMP_CELSIUS);
 
-        //log_temp_data(temp_value);
+        log_temp_data(temp_value);
 
         sleep(10);
     } 
@@ -383,12 +383,12 @@ void *socket_thread_func(void *arg)
 
         size_t num_read_bytes = read(accept_conn_id, &recv_buffer, sizeof(recv_buffer));
 
-        printf("[Temp_Task] Message req api: %s, req recp: %s, req api params: %s\n",
+        printf("[Temp_Task] Message req api: %s, req recp: %s, req api params: %d\n",
                 (((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg),
                 ((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_recipient)
                  == REQ_RECP_TEMP_TASK ? "Temp Task" : "Light Task"),
-                (((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list != NULL ?
-                 ((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list :"NULL"));
+                (int)(((struct _socket_req_msg_struct_ *)&recv_buffer)->params));
+
     
         if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "get_temp_data"))
         {
@@ -432,7 +432,7 @@ void *socket_thread_func(void *arg)
             char temp_data_msg[64];
             memset(temp_data_msg, '\0', sizeof(temp_data_msg));
 
-            sprintf(temp_data_msg, "T_High Data: %d", temp_data);
+            sprintf(temp_data_msg, "Temp EM data: %d", temp_data);
 
             ssize_t num_sent_bytes = send(accept_conn_id, temp_data_msg, strlen(temp_data_msg), 0);
             if (num_sent_bytes < 0)
@@ -464,100 +464,81 @@ void *socket_thread_func(void *arg)
         }
 		else if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "set_temp_on_off"))
         {
-            if((((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list) != NULL){
-				
-				uint8_t data = *(uint8_t *)(((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list);
-				write_config_register_on_off(data);
-				char temp_data_msg[64];
-				memset(temp_data_msg, '\0', sizeof(temp_data_msg));
+            uint8_t data = (uint8_t)(((struct _socket_req_msg_struct_ *)&recv_buffer)->params);
+            write_config_register_on_off(data);
+            char temp_data_msg[64];
+            memset(temp_data_msg, '\0', sizeof(temp_data_msg));
 
-				sprintf(temp_data_msg, "%s", "Set success");
+            sprintf(temp_data_msg, "%s", "Set success");
 
-				ssize_t num_sent_bytes = send(accept_conn_id, temp_data_msg, strlen(temp_data_msg), 0);
-				if (num_sent_bytes < 0)
-					perror("send failed");
-			}
+            ssize_t num_sent_bytes = send(accept_conn_id, temp_data_msg, strlen(temp_data_msg), 0);
+            if (num_sent_bytes < 0)
+                perror("send failed");
         }
 		else if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "set_temp_em"))
         {
-            if((((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list) != NULL){
-				
-				uint8_t data = *(uint8_t *)(((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list);
-				printf("DATA:::::: %d\n", data);
-                write_config_register_em(data);
-				char temp_data_msg[64];
-				memset(temp_data_msg, '\0', sizeof(temp_data_msg));
+            uint8_t data = (uint8_t)(((struct _socket_req_msg_struct_ *)&recv_buffer)->params);
+            write_config_register_em(data);
+            char temp_data_msg[64];
+            memset(temp_data_msg, '\0', sizeof(temp_data_msg));
 
-				sprintf(temp_data_msg, "%s", "Set success");
+            sprintf(temp_data_msg, "%s", "Set success");
 
-				ssize_t num_sent_bytes = send(accept_conn_id, temp_data_msg, strlen(temp_data_msg), 0);
-				if (num_sent_bytes < 0)
-					perror("send failed");
-			}
+            ssize_t num_sent_bytes = send(accept_conn_id, temp_data_msg, strlen(temp_data_msg), 0);
+            if (num_sent_bytes < 0)
+                perror("send failed");
         }
 		else if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "set_temp_conversion_rate"))
         {
-            if((((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list) != NULL){
-				
-				uint8_t data = *(uint8_t *)(((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list);
-				write_config_register_conversion_rate(data);
-				char temp_data_msg[64];
-				memset(temp_data_msg, '\0', sizeof(temp_data_msg));
+            uint8_t data = (uint8_t)(((struct _socket_req_msg_struct_ *)&recv_buffer)->params);
+            write_config_register_conversion_rate(data);
+            char temp_data_msg[64];
+            memset(temp_data_msg, '\0', sizeof(temp_data_msg));
 
-				sprintf(temp_data_msg, "%s", "Set success");
+            sprintf(temp_data_msg, "%s", "Set success");
 
-				ssize_t num_sent_bytes = send(accept_conn_id, temp_data_msg, strlen(temp_data_msg), 0);
-				if (num_sent_bytes < 0)
-					perror("send failed");
-			}
+            ssize_t num_sent_bytes = send(accept_conn_id, temp_data_msg, strlen(temp_data_msg), 0);
+            if (num_sent_bytes < 0)
+                perror("send failed");
         }
 		else if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "set_temp_high_data"))
         {
-            if((((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list) != NULL){
-				
-				int16_t data = *(uint8_t *)(((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list);
-				write_temp_high_low_register(I2C_TEMP_SENSOR_THIGH_REG,data);
-				char temp_data_msg[64];
-				memset(temp_data_msg, '\0', sizeof(temp_data_msg));
+            int16_t data = (int16_t)(((struct _socket_req_msg_struct_ *)&recv_buffer)->params);
+            write_temp_high_low_register(I2C_TEMP_SENSOR_THIGH_REG,data);
+            char temp_data_msg[64];
+            memset(temp_data_msg, '\0', sizeof(temp_data_msg));
 
-				sprintf(temp_data_msg, "%s", "Set success");
+            sprintf(temp_data_msg, "%s", "Set success");
 
-				ssize_t num_sent_bytes = send(accept_conn_id, temp_data_msg, strlen(temp_data_msg), 0);
-				if (num_sent_bytes < 0)
-					perror("send failed");
-			}
+            ssize_t num_sent_bytes = send(accept_conn_id, temp_data_msg, strlen(temp_data_msg), 0);
+            if (num_sent_bytes < 0)
+                perror("send failed");
         }
 		else if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "set_temp_low_data"))
         {
-            if((((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list) != NULL){
-				
-				int16_t data = *(uint8_t *)(((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list);
-				write_temp_high_low_register(I2C_TEMP_SENSOR_TLOW_REG,data);
-				char temp_data_msg[64];
-				memset(temp_data_msg, '\0', sizeof(temp_data_msg));
+            int16_t data = (int16_t)(((struct _socket_req_msg_struct_ *)&recv_buffer)->params);
+            write_temp_high_low_register(I2C_TEMP_SENSOR_TLOW_REG,data);
+            char temp_data_msg[64];
+            memset(temp_data_msg, '\0', sizeof(temp_data_msg));
 
-				sprintf(temp_data_msg, "%s", "Set success");
+            sprintf(temp_data_msg, "%s", "Set success");
 
-				ssize_t num_sent_bytes = send(accept_conn_id, temp_data_msg, strlen(temp_data_msg), 0);
-				if (num_sent_bytes < 0)
-					perror("send failed");
-			}
+            ssize_t num_sent_bytes = send(accept_conn_id, temp_data_msg, strlen(temp_data_msg), 0);
+            if (num_sent_bytes < 0)
+                perror("send failed");
         }
-		else if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "set_temp_fault_bits"))
+        else if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "set_temp_fault_bits"))
         {
-            if((((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list) != NULL){
-				
-				uint8_t data = *(uint8_t *)(((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list);
-				write_config_register_fault_bits(data);
-				char temp_data_msg[64];
-				memset(temp_data_msg, '\0', sizeof(temp_data_msg));
+            uint8_t data = (uint8_t)(((struct _socket_req_msg_struct_ *)&recv_buffer)->params);
+            write_config_register_fault_bits(data);
+            char temp_data_msg[64];
+            memset(temp_data_msg, '\0', sizeof(temp_data_msg));
 
-				sprintf(temp_data_msg, "%s", "Set success");
+            sprintf(temp_data_msg, "%s", "Set success");
 
-				ssize_t num_sent_bytes = send(accept_conn_id, temp_data_msg, strlen(temp_data_msg), 0);
-				if (num_sent_bytes < 0)
-					perror("send failed");
-			}
+            ssize_t num_sent_bytes = send(accept_conn_id, temp_data_msg, strlen(temp_data_msg), 0);
+            if (num_sent_bytes < 0)
+                perror("send failed");
         }
 		else if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "get_temp_fault_bits"))
         {

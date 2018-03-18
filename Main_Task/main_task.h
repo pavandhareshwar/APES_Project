@@ -49,6 +49,7 @@
 
 #define BUFF_SIZE                           1024
 #define MSG_MAX_LEN                         128
+#define MSG_BUFF_MAX_LEN                    1024
 
 #define MSG_QUEUE_NAME                      "/logger_task_mq"
 #define MSG_QUEUE_MAX_NUM_MSGS              5
@@ -77,6 +78,10 @@ struct sockaddr_in socket_task_sock_addr, logger_task_sock_addr;
 
 int temp_task_unalive_count, light_task_unalive_count;
 int logger_task_unalive_count, socket_task_unalive_count;
+
+mqd_t logger_mq_handle;
+
+sig_atomic_t g_kill_main_task;
 
 /*---------------------------------- GLOBALS --------------------------------*/
 
@@ -198,11 +203,12 @@ void perform_startup_test(void);
  *  and communication primitives of the specified sub task are working.
  *
  *  @param sock_fd                     : socket file descriptor
+ *  @param proc_name                   : process name
  *
  *  @return void
  *
  */
-int perform_sub_task_startup_test(int sock_fd);
+int perform_sub_task_startup_test(int sock_fd, char *proc_name);
 
 /**
  *  @brief Stop entire system 
@@ -256,6 +262,19 @@ void turn_on_usr_led(void);
  */
 void write_pid_to_file(char *proc_name, pid_t child_pid);
 
+/**
+ *  @brief Signal handler for main task
+ *
+ *  This function handles the reception of SIGKILL and SIGINT signal to the
+ *  temperature task and terminates all the threads, closes the I2C file descriptor
+ *  and logger message queue handle and exits.
+ *
+ *  @param sig_num              : signal number
+ *
+ *  @return void
+*/
+
+void sig_handler(int sig_num);
 /*---------------------------- FUNCTION PROTOTYPES --------------------------*/
 
 #endif // _MAIN_TASK_H_

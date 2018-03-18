@@ -93,6 +93,7 @@ int sensor_thread_id, socket_thread_id, socket_hb_thread_id;
 mqd_t logger_mq_handle;
 
 sig_atomic_t g_sig_kill_sensor_thread, g_sig_kill_sock_thread, g_sig_kill_sock_hb_thread;
+int light_sensor_initialized;
 /*---------------------------------- GLOBALS --------------------------------*/
 
 /*---------------------------- STRUCTURES/ENUMERATIONS ----------------------*/
@@ -114,7 +115,7 @@ struct _socket_req_msg_struct_
 {
     char req_api_msg[SOCK_REQ_MSG_API_MSG_LEN];
     enum _req_recipient_ req_recipient;
-    void *ptr_param_list;
+    int param;
 };
 
 #if 0

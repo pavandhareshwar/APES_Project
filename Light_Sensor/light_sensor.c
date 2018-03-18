@@ -13,6 +13,8 @@
 
 int main(void){
 
+    light_sensor_initialized = 0;
+
     int init_ret_val = light_sensor_init();
     if (init_ret_val == -1)
     {
@@ -70,6 +72,9 @@ int light_sensor_init(void)
     /* Power on the APDS-9301 device */
     power_on_light_sensor();
     printf("Powered on light sensor\n");
+
+    if (light_sensor_initialized == 0)
+        light_sensor_initialized = 1;
 
     return 0;
 }
@@ -174,12 +179,11 @@ void *socket_thread_func(void *arg)
 
         size_t num_read_bytes = read(accept_conn_id, &recv_buffer, sizeof(recv_buffer));
 
-        printf("[Light_Task] Message req api: %s, req recp: %s, req api params: %s\n",
+        printf("[Light_Task] Message req api: %s, req recp: %s, req api params: %d\n",
                 (((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg),
                 ((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_recipient)
                  == REQ_RECP_TEMP_TASK ? "Temp Task" : "Light Task"),
-                (((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list != NULL ?
-                 ((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list :"NULL"));
+                (((struct _socket_req_msg_struct_ *)&recv_buffer)->param));
 
         char light_sensor_rsp_msg[64];
         if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "get_lux_data"))
@@ -223,12 +227,12 @@ void *socket_thread_func(void *arg)
         }
         else if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "set_light_sensor_ctrl_reg"))
         {
-            if (((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list != NULL)
+            //if (((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list != NULL)
             {
 				#if 0
 					uint8_t cmd_ctrl_reg_val = *(uint8_t *)(((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list);
 				#endif
-				uint8_t cmd_ctrl_reg_val = (((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list);
+				uint8_t cmd_ctrl_reg_val = (uint8_t)(((struct _socket_req_msg_struct_ *)&recv_buffer)->param);
                 if (write_ctrl_reg(cmd_ctrl_reg_val) == 0)
                 {
                     memset(light_sensor_rsp_msg, '\0', sizeof(light_sensor_rsp_msg));
@@ -278,11 +282,11 @@ void *socket_thread_func(void *arg)
 		#endif
 		else if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "set_light_sensor_integration_time"))
         {
-            if (((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list != NULL)
+            //if (((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list != NULL)
             {
          
                 uint8_t cmd_tim_reg_val = read_timing_reg();
-                uint8_t cmd_tim_field_val = (((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list);
+                uint8_t cmd_tim_field_val = (uint8_t)(((struct _socket_req_msg_struct_ *)&recv_buffer)->param);
 
                 if (write_timing_reg(cmd_tim_reg_val, 0x3, cmd_tim_field_val) == 0)
                 {
@@ -297,11 +301,11 @@ void *socket_thread_func(void *arg)
         }
 		else if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "set_light_sensor_gain"))
         {
-            if (((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list != NULL)
+            //if (((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list != NULL)
             {
          
                 uint8_t cmd_tim_reg_val = read_timing_reg();
-                uint8_t cmd_tim_field_val = (((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list);
+                uint8_t cmd_tim_field_val = (uint8_t)(((struct _socket_req_msg_struct_ *)&recv_buffer)->param);
 
                 if (write_timing_reg(cmd_tim_reg_val, 0x10, cmd_tim_field_val) == 0)
                 {
@@ -316,11 +320,11 @@ void *socket_thread_func(void *arg)
         }
 		else if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "set_interrupt_low_threshold"))
         {
-            if (((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list != NULL)
+            //if (((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list != NULL)
             {
          
             
-                uint16_t low_thresh = (((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list);
+                uint16_t low_thresh = (uint16_t)(((struct _socket_req_msg_struct_ *)&recv_buffer)->param);
 
                 write_intr_low_thresh_reg(low_thresh);
 
@@ -332,11 +336,10 @@ void *socket_thread_func(void *arg)
         }
 		else if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "set_interrupt_high_threshold"))
         {
-            if (((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list != NULL)
+            //if (((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list != NULL)
             {
          
-            
-                uint16_t high_thresh = (((struct _socket_req_msg_struct_ *)&recv_buffer)->ptr_param_list);
+                uint16_t high_thresh = (uint16_t)(((struct _socket_req_msg_struct_ *)&recv_buffer)->param);
 
                 write_intr_high_thresh_reg(high_thresh);
 
@@ -378,13 +381,18 @@ void *socket_thread_func(void *arg)
             uint16_t low_thresh, high_thresh;
             read_intr_thresh_reg(&low_thresh, &high_thresh);
 
+            printf("low_thresh: %d, high_thresh: %d\n", low_thresh, high_thresh);
+
             struct _int_thresh_reg_struct_ int_thresh_reg_struct;
             int_thresh_reg_struct.low_thresh = low_thresh; 
             int_thresh_reg_struct.high_thresh = high_thresh; 
+            
             ssize_t num_sent_bytes = send(accept_conn_id, &int_thresh_reg_struct, 
                                             sizeof(struct _int_thresh_reg_struct_), 0);
             if (num_sent_bytes < 0)
                 perror("send failed");
+            else 
+                printf("Sent %d bytes in light task\n", num_sent_bytes);
         }
 #if 0
         else if (!strcmp((((struct _socket_req_msg_struct_ *)&recv_buffer)->req_api_msg), "set_light_sensor_int_thresh_reg"))
@@ -517,6 +525,20 @@ void *socket_hb_thread_func(void *arg)
         if (!strcmp(recv_buffer, "heartbeat"))
         {
 			ssize_t num_sent_bytes = send(accept_conn_id, send_buffer, strlen(send_buffer), 0);
+            if (num_sent_bytes < 0)
+                perror("send failed");
+        }
+        else if (!strcmp(recv_buffer, "startup_check"))
+        {
+            /* For the sake of start-up check, because we have the temperature sensor initialized
+            ** by the time this thread is spawned. So we perform a "get_temp_data" call to see if
+            ** everything is working fine */
+            if (light_sensor_initialized == 1)
+                strcpy(send_buffer, "Initialized");
+            else
+                strcpy(send_buffer, "Uninitialized");
+
+            ssize_t num_sent_bytes = send(accept_conn_id, send_buffer, strlen(send_buffer), 0);
             if (num_sent_bytes < 0)
                 perror("send failed");
         }
@@ -680,7 +702,7 @@ void log_lux_data(float lux_data)
     struct _logger_msg_struct_ logger_msg;
     memset(&logger_msg, '\0', sizeof(logger_msg));
     strcpy(logger_msg.message, lux_data_msg);
-    strcpy(logger_msg.logger_msg_src_id, "Light");                                    
+    strncpy(logger_msg.logger_msg_src_id, "Light", strlen("Light"));                                    
     logger_msg.logger_msg_src_id[strlen("Light") + 1] = '\0';                                              
     strncpy(logger_msg.logger_msg_level, "Info", strlen("Info"));                                     
     logger_msg.logger_msg_level[strlen("Info") + 1] = '\0';
@@ -723,7 +745,7 @@ void sig_handler(int sig_num)
 
 void write_cmd_reg(uint8_t cmd_reg_val)
 {
-
+    return;
 }
 
 uint8_t read_ctrl_reg(void)
@@ -768,29 +790,14 @@ int write_timing_reg(uint8_t tim_reg_val, uint8_t field_to_set, uint8_t field_va
 {
     uint8_t cmd_tim_reg = I2C_LIGHT_SENSOR_CMD_TIM_REG;
     int ret_val = -1;
-	
-	uint8_t time_reg_val_copy = tim_reg_val;
-	time_reg_val_copy &= ~field_to_set;
-	time_reg_val_copy |= (field_val << 4);
 
-	if (write_light_sensor_reg(cmd_tim_reg, time_reg_val_copy) == 0)
-	{
-		ret_val = 0;
-	}
-	else
-	{
-		ret_val = -1;
-	}
-	return ret_val;
-	
-	#if 0
     if (field_to_set & 0x3 == 0x3)
     {
         /* Setting integration time */
         uint8_t time_reg_val_copy = tim_reg_val;
-        time_reg_val_copy &= ~0x3;
+        time_reg_val_copy &= 0xFC;
         time_reg_val_copy |= field_val;
-    
+
         if (write_light_sensor_reg(cmd_tim_reg, time_reg_val_copy) == 0)
         {
             ret_val = 0;
@@ -807,7 +814,7 @@ int write_timing_reg(uint8_t tim_reg_val, uint8_t field_to_set, uint8_t field_va
         uint8_t time_reg_val_copy = tim_reg_val;
         time_reg_val_copy &= ~0x10;
         time_reg_val_copy |= (field_val << 4);
-    
+
         if (write_light_sensor_reg(cmd_tim_reg, time_reg_val_copy) == 0)
         {
             ret_val = 0;
@@ -817,10 +824,7 @@ int write_timing_reg(uint8_t tim_reg_val, uint8_t field_to_set, uint8_t field_va
             ret_val = -1;
         }
         return ret_val;
-
     }
-	#endif
-
 }
 
 int enable_disable_intr_ctrl_reg(uint8_t int_ctrl_reg_val)

@@ -75,6 +75,7 @@ sig_atomic_t g_sig_kill_sock_thread, g_sig_kill_sock_hb_thread;
 
 mqd_t logger_mq_handle;
 
+int socket_task_initialized;
 /*---------------------------------- GLOBALS --------------------------------*/
 
 /*---------------------------- STRUCTURES/ENUMERATIONS ----------------------*/
@@ -88,7 +89,7 @@ struct _socket_req_msg_struct_
 {
     char req_api_msg[SOCK_REQ_MSG_API_MSG_LEN];
     enum _req_recipient_ req_recipient;
-    void *ptr_param_list;
+    int params;
 };
 
 struct _logger_msg_struct_

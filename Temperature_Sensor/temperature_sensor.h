@@ -40,8 +40,8 @@
 char i2c_name[10];
 int sensor_thread_id, socket_thread_id, socket_hb_thread_id;
 int file_descriptor;
-int default_config_byte_one = 0X60;
-int default_config_byte_two = 0XA0;
+int default_config_byte_one = 0XA0;
+int default_config_byte_two = 0X60;
 
 int temp_sensor_initialized;
 
@@ -103,7 +103,7 @@ struct _socket_req_msg_struct_
 {
     char req_api_msg[SOCK_REQ_MSG_API_MSG_LEN];
     enum _req_recipient_ req_recipient;
-    void *ptr_param_list;
+    int params;
 };
 
 /*---------------------------- FUNCTION PROTOTYPES --------------------------*/

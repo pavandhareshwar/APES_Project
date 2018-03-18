@@ -14,6 +14,7 @@ int main(void)
 
     create_sub_processes();
 
+    /* Open semaphore used for synchronization */
     sem_t *shared_sem;
 
     if ((shared_sem = sem_open("wrapper_sem", O_CREAT | O_EXCL, 0644, 1)) == SEM_FAILED)
@@ -26,6 +27,12 @@ int main(void)
         sem_unlink("wrapper_sem");
     }
 
+    if (signal(SIGINT, sig_handler) == SIG_ERR)
+        printf("SigHandler setup for SIGINT failed\n");
+
+    if (signal(SIGUSR1, sig_handler) == SIG_ERR)
+        printf("SigHandler setup for SIGKILL failed\n");
+
     sleep(3);
 
     /* Create and initialize temperature task socket */
@@ -37,7 +44,6 @@ int main(void)
         return -1;
     }
 
-#if 1
     /* Create and initialize light task socket */
     initialize_sub_task_socket(&light_task_sockfd, &light_task_sock_addr, LIGHT_TASK_PORT_NUM);
 
@@ -46,7 +52,6 @@ int main(void)
         printf("\nConnection Failed for light task \n");
         return -1;
     }
-#endif
     
     /* Create and initialize socket task socket */
     initialize_sub_task_socket(&socket_task_sockfd, &socket_task_sock_addr, SOCKET_TASK_PORT_NUM);
@@ -68,10 +73,10 @@ int main(void)
   
     sleep(2);
 
-    //printf("Performing system start-up test\n");
-    //perform_startup_test();
+    printf("Performing system start-up test\n");
+    perform_startup_test();
 
-    while(1)
+    while(!g_kill_main_task)
     {
         check_status_of_sub_tasks();
 
@@ -102,12 +107,10 @@ void create_sub_processes(void)
     strcpy(sub_process_name, "temperature"); 
     create_sub_process(sub_process_name);
   
-#if 1
     /* Creating light sensor task */
     memset(sub_process_name, '\0', sizeof(sub_process_name));
     strcpy(sub_process_name, "light"); 
     create_sub_process(sub_process_name);
-#endif
 
     sleep(2);
 
@@ -327,30 +330,27 @@ void perform_startup_test(void)
     */
 
     /* Check the temperature sensor task, hardware and I2C */
-    int temp_task_st_status = perform_sub_task_startup_test(temp_task_sockfd);
+    int temp_task_st_status = perform_sub_task_startup_test(temp_task_sockfd, "temp");
     if (temp_task_st_status != 0)
         stop_entire_system();
 
-#if 0    
     /* Check the light sensor task, hardware and I2C */
-    int light_task_st_status = perform_sub_task_startup_test(light_task_sockfd);     
+    int light_task_st_status = perform_sub_task_startup_test(light_task_sockfd, "light");     
     if (light_task_st_status != 0)
         stop_entire_system();
     
     /* Check the logger task */
-    int logger_task_st_status = perform_sub_task_startup_test(logger_task_sockfd);
+    int logger_task_st_status = perform_sub_task_startup_test(logger_task_sockfd, "logger");
     if (logger_task_st_status != 0)
         stop_entire_system();
     
     /* Check the socket task */
-    int socket_task_st_status = perform_sub_task_startup_test(socket_task_sockfd);
+    int socket_task_st_status = perform_sub_task_startup_test(socket_task_sockfd, "socket");
     if (socket_task_st_status != 0)
         stop_entire_system();
-#endif
-
 }
 
-int perform_sub_task_startup_test(int sock_fd)
+int perform_sub_task_startup_test(int sock_fd, char *proc_name)
 {
     char recv_buffer[BUFF_SIZE];
     char send_buffer[] = "startup_check";
@@ -367,12 +367,12 @@ int perform_sub_task_startup_test(int sock_fd)
 
     if (!strcmp(recv_buffer, "Initialized"))
     {
-        printf("Temperature sensor is initialized\n");
+        printf("%s sensor is initialized\n", proc_name);
         return 0;
     }
     else if (!strcmp(recv_buffer, "Uninitialized"))
     {
-        printf("Temperature sensor isn't initalized\n");
+        printf("%s sensor isn't initalized\n", proc_name);
         return -1;
     }
     else
@@ -402,10 +402,6 @@ void kill_already_created_processes(void)
         perror("file open failed");
         printf("File %s open failed\n", "pid_info_file.txt");
         return;
-    }
-    else
-    {
-        printf("pid info file opened success\n");
     }
 
     char *buffer;
@@ -516,7 +512,28 @@ void kill_already_created_processes(void)
 void turn_on_usr_led(void)
 {
     printf("Turning on USR led\n");
+   
+#if 0
+    FILE *fp_brightness_file = fopen("/sys/class/leds/beaglebone:green:usr2/brightness", "w");
+    if (fp_brightness_file == NULL)
+    {
+        perror("fopen failed");
+        printf("Failed to open brightness file\n");
+        return;
+    }
 
+    int on_value = 1;
+
+    fwrite(&on_value, 1, sizeof(int), fp_brightness_file);
+
+    fclose(fp_brightness_file);
+#endif
+
+    char led_turn_on_cmd[128];
+    memset(led_turn_on_cmd, '\0', sizeof(led_turn_on_cmd));
+
+    sprintf(led_turn_on_cmd, "sudo sh -c 'echo 1 > /sys/class/leds/beaglebone:green:usr3/brightness'");
+    system(led_turn_on_cmd);
 }
 
 void log_task_unalive_msg_to_log_file(char *task_name)
@@ -529,7 +546,7 @@ void log_task_unalive_msg_to_log_file(char *task_name)
                                       .mq_msgsize = MSG_QUEUE_MAX_MSG_SIZE  // Max. message size
                                     };
 
-    mqd_t logger_mq_handle = mq_open(MSG_QUEUE_NAME, O_RDWR, S_IRWXU, &logger_mq_attr);
+    logger_mq_handle = mq_open(MSG_QUEUE_NAME, O_RDWR, S_IRWXU, &logger_mq_attr);
 
     char main_task_data_msg[MSG_MAX_LEN];
     memset(main_task_data_msg, '\0', sizeof(main_task_data_msg));
@@ -549,4 +566,24 @@ void log_task_unalive_msg_to_log_file(char *task_name)
                             sizeof(logger_msg), msg_priority);
     if (num_sent_bytes < 0)
         perror("mq_send failed");
+}
+
+void sig_handler(int sig_num)
+{
+    char buffer[MSG_BUFF_MAX_LEN];
+    memset(buffer, '\0', sizeof(buffer));
+
+    if (sig_num == SIGINT || sig_num == SIGUSR1)
+    {
+        if (sig_num == SIGINT)
+            printf("Caught signal %s in temperature task\n", "SIGINT");
+        else if (sig_num == SIGUSR1)
+            printf("Caught signal %s in temperature task\n", "SIGKILL");
+
+        kill_already_created_processes();
+        
+        mq_close(logger_mq_handle);
+        
+        g_kill_main_task = 1;
+    }
 }

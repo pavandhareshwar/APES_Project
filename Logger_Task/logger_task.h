@@ -70,6 +70,8 @@ pthread_t logger_thread_id, socket_hb_thread_id;
 
 sig_atomic_t g_sig_kill_logger_thread, g_sig_kill_sock_hb_thread;
 
+int logger_task_initialized = 0;
+
 /*---------------------------------- GLOBALS --------------------------------*/
 
 /*---------------------------- STRUCTURES/ENUMERATIONS ----------------------*/
