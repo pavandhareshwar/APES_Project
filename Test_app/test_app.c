@@ -65,8 +65,8 @@ int main(void)
 		printf("Enter (14) to exit the external application.\n");
 		printf("/********************************************************************/\n");
 		
-		print("\nEnter the option number you want to select:\n");
-		scanf("%d",user_option);
+		printf("\nEnter the option number you want to select:\n");
+		scanf("%d",&user_option);
 		
 		if((user_option > 0) || (user_option < 9)){
 			
@@ -222,9 +222,9 @@ int main(void)
 				strcpy(ext_app_req_msg.req_api_msg, "set_temp_on_off");
 				ext_app_req_msg.req_recipient = REQ_RECP_TEMP_TASK;
 				
-				int temp_control=0;
+				int temp_control = 0;
 				printf("Enter option to control temperature sensor (ON-0 / OFF-1)\n");
-				scanf("%d",temp_control);
+				scanf("%d",&temp_control);
 				ext_app_req_msg.ptr_param_list = &temp_control;
 
 				printf("Sending %s request to socket task\n", ext_app_req_msg.req_api_msg);
@@ -246,10 +246,11 @@ int main(void)
 				strcpy(ext_app_req_msg.req_api_msg, "set_temp_em");
 				ext_app_req_msg.req_recipient = REQ_RECP_TEMP_TASK;
 				
-				int temp_conversion=0;
+				uint8_t temp_conversion = 0;
 				printf("Enter option to set extended mode operation of temperature sensor (Normal Mode-0 / Extended mode-1)\n");
-				scanf("%d",temp_conversion);
-				ext_app_req_msg.ptr_param_list = &temp_conversion;
+				scanf("%d", &temp_conversion);
+                printf("Temp_Conv: %d\n", temp_conversion);
+				ext_app_req_msg.ptr_param_list = (uint8_t *)&temp_conversion;
 
 				printf("Sending %s request to socket task\n", ext_app_req_msg.req_api_msg);
 				ssize_t num_sent_bytes = send(client_sock, &ext_app_req_msg, 
@@ -272,7 +273,7 @@ int main(void)
 				
 				int temp_conversion=0;
 				printf("Enter option to set conversion rate of temperature sensor (0.2Hz-0 , 1Hz-1, 4Hz(Default)-2, 8hz-3)\n");
-				scanf("%d",temp_conversion);
+				scanf("%d",&temp_conversion);
 				ext_app_req_msg.ptr_param_list = &temp_conversion;
 
 				printf("Sending %s request to socket task\n", ext_app_req_msg.req_api_msg);
@@ -296,7 +297,7 @@ int main(void)
 				
 				int16_t temp_high=0;
 				printf("Enter option to set high threshold of temperature sensor \n");
-				scanf("%d",temp_high);
+				scanf("%d",&temp_high);
 				ext_app_req_msg.ptr_param_list = &temp_high;
 
 				printf("Sending %s request to socket task\n", ext_app_req_msg.req_api_msg);
@@ -320,7 +321,7 @@ int main(void)
 				
 				int16_t temp_low=0;
 				printf("Enter option to set low threshold of temperature sensor\n");
-				scanf("%d",temp_low);
+				scanf("%d",&temp_low);
 				ext_app_req_msg.ptr_param_list = &temp_low;
 
 				printf("Sending %s request to socket task\n", ext_app_req_msg.req_api_msg);
@@ -344,7 +345,7 @@ int main(void)
 				
 				uint8_t temp_fault=0;
 				printf("Enter option to set fault bits of temperature sensor\n");
-				scanf("%d",temp_fault);
+				scanf("%d",&temp_fault);
 				ext_app_req_msg.ptr_param_list = &temp_fault;
 
 				printf("Sending %s request to socket task\n", ext_app_req_msg.req_api_msg);

@@ -117,6 +117,7 @@ struct _socket_req_msg_struct_
     void *ptr_param_list;
 };
 
+#if 0
 struct _int_thresh_reg_struct_
 {
     uint8_t thresh_low_low;
@@ -124,7 +125,20 @@ struct _int_thresh_reg_struct_
     uint8_t thresh_high_low;
     uint8_t thresh_high_high;
 };
+#endif
+struct _int_thresh_reg_struct_
+{
+    uint16_t low_thresh;
+    uint16_t high_thresh;
+};
 
+struct _light_sensor_tim_params
+{
+    uint8_t tim_reg_val;
+    uint8_t tim_reg_field_to_set;
+    uint8_t tim_reg_field_val;
+
+};
 /*---------------------------- STRUCTURES/ENUMERATIONS ----------------------*/
 
 /*---------------------------- FUNCTION PROTOTYPES --------------------------*/
@@ -283,7 +297,7 @@ void get_adc_channel_data(int channel_num, uint16_t *ch_data);
  *  @param ch0_data     : ADC channel 0 data
  *  @param ch1_data     : ADC channel 1 data
  *
- *  @return void 
+ *  @return lux_val 
 */
 float calculate_lux_value(uint16_t ch0_data, uint16_t ch1_data);
 
@@ -338,6 +352,114 @@ void init_sock(int *sock_fd, struct sockaddr_in *server_addr_struct,
 */
 
 void sig_handler(int sig_num);
+
+/**
+ *  @brief Write command register of light sensor
+ *
+ *  This function will write to command register of light sensor
+ *
+ *  @param cmd_reg_val    : value to be written
+ *
+ *  @return 0   : success
+ *          -1  : failure
+ */
+void write_cmd_reg(uint8_t cmd_reg_val);
+
+/**
+ *  @brief Read control register of light sensor
+ *
+ *  This function will read the control register of light sensor
+ *
+ *  @param void
+ *
+ *  @return ctrl_reg_val 
+*/
+uint8_t read_ctrl_reg(void);
+
+/**
+ *  @brief Write control register of light sensor
+ *
+ *  This function will write to control register of light sensor
+ *
+ *  @param ctrl_reg_val    : value to be written
+ *
+ *  @return 0   : success
+ *          -1  : failure
+ */
+int write_ctrl_reg(uint8_t ctrl_reg_val);
+
+/**
+ *  @brief Read timing register of light sensor
+ *
+ *  This function will read the timing register of light sensor
+ *
+ *  @param void
+ *
+ *  @return tim_reg_val 
+*/
+uint8_t read_timing_reg(void);
+
+/**
+ *  @brief Write timing register of light sensor
+ *
+ *  This function will write to timing register of light sensor
+ *
+ *  @param tim_reg_val     : value to be written
+ *  @param field_to_set    : timing register field to be set
+ *  @param field_val       : field value
+ *
+ *  @return 0   : success
+ *          -1  : failure
+ */
+int write_timing_reg(uint8_t tim_reg_val, uint8_t field_to_set, uint8_t field_val);
+
+/**
+ *  @brief Enable or disable interrupt register of light sensor
+ *
+ *  This function will enable or diable the interrupt control register of 
+ *  light sensor
+ *
+ *  @param int_ctrl_reg_val     : value to be written
+ *
+ *  @return 0   : success
+ *          -1  : failure
+*/
+int enable_disable_intr_ctrl_reg(uint8_t int_ctrl_reg_val);
+
+/**
+ *  @brief Read identification register of light sensor
+ *
+ *  This function will read the identification register of light sensor
+ *
+ *  @param void
+ *
+ *  @return tim_reg_val 
+*/
+uint8_t read_id_reg(void);
+
+/**
+ *  @brief Read interrupt threshold register of light sensor
+ *
+ *  This function will read the interrupt threshold register of light sensor
+ *
+ *  @param low_thresh            : pointer to low threshold value
+ *  @param high_thresh           : pointer to high threshold value
+ *
+ *  @return void 
+*/
+void read_intr_thresh_reg(uint16_t *low_thresh, uint16_t *high_thresh);
+
+/**
+ *  @brief Write interrupt threshold register of light sensor
+ *
+ *  This function will write the interrupt threshold register of light sensor
+ *
+ *  @param low_thresh            : low threshold value to be written
+ *  @param high_thresh           : high threshold value to be written
+ *
+ *  @return void 
+*/
+void write_intr_thresh_reg(uint16_t low_thresh, uint16_t high_thresh);
 /*---------------------------- FUNCTION PROTOTYPES --------------------------*/
 
 #endif
