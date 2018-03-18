@@ -19,12 +19,7 @@
 #include "temperature_sensor.h"
 
 /* Macros section */
-#define TEST_NUM_ZERO (0)
-#define TEST_NUM_ONE (1)
-#define TEST_NUM_TWO (2)
-#define TEST_NUM_TEN (10)
-#define TEST_NUM_ELEVEN (11)
-#define TEST_NUM_TWELVE (12)
+
 
 /**
 ​* ​ ​ @brief​ : test function for writing and reading temperature 
@@ -38,7 +33,7 @@
 void test_temperature_config_register(void **state){
 
 	/* Test case for checking temperature configuration register */	
-	write_config_register_default()
+	write_config_register_default();
 	uint16_t return_value = read_temp_config_register();
 	assert_int_equal(return_value, ((default_config_byte_one << 8) | default_config_byte_two));
 
@@ -56,8 +51,8 @@ void test_temperature_config_register(void **state){
 void test_temperature_threshold_high(void **state){
 
 	/* Test case for checking temperature high threshold value register */	
-	uint16_t data = 0X9876
-	write_temp_high_low_register(I2C_TEMP_SENSOR_THIGH_REG,data)
+	uint16_t data = 0X9876;
+	write_temp_high_low_register(I2C_TEMP_SENSOR_THIGH_REG,data);
 	uint16_t return_value = read_temp_high_low_register(I2C_TEMP_SENSOR_THIGH_REG);
 	assert_int_equal(return_value, data);	
 }
@@ -74,8 +69,8 @@ void test_temperature_threshold_high(void **state){
 void test_temperature_threshold_low(void **state){
 
 	/* Test case for checking temperature low threshold value register */	
-	uint16_t data = 0X9876
-	write_temp_high_low_register(I2C_TEMP_SENSOR_TLOW_REG,data)
+	uint16_t data = 0X7676;
+	write_temp_high_low_register(I2C_TEMP_SENSOR_TLOW_REG,data);
 	uint16_t return_value = read_temp_high_low_register(I2C_TEMP_SENSOR_TLOW_REG);
 	assert_int_equal(return_value, data);	
 }
@@ -92,7 +87,7 @@ void test_temperature_config_em(void **state){
 
 	/* Test case for checking em-bit of config register */
 	int data = 1;
-	write_config_register_em(data)
+	write_config_register_em(data);
 	uint16_t return_value = read_config_register_em();
 	assert_int_equal(return_value, data);
 	
@@ -110,7 +105,7 @@ void test_temperature_config_conversion_rate(void **state){
 
 	/* Test case for checking conversion rate of config register */
 	int data = 1;
-	write_config_register_conversion_rate(data)
+	write_config_register_conversion_rate(data);
 	uint16_t return_value = read_config_register_conversion_rate();
 	assert_int_equal(return_value, data);
 	
@@ -128,7 +123,7 @@ void test_temperature_config_conversion_rate_false(void **state){
 
 	/* Test case for checking negative scenario conversion rate of config register */
 	int data = 1;
-	write_config_register_conversion_rate(data)
+	write_config_register_conversion_rate(data);
 	uint16_t return_value = read_config_register_conversion_rate();
 	assert_int_equal(return_value, data);
 	
