@@ -1,12 +1,18 @@
 /**
- * @file   gpio_test.c
- * @author Derek Molloy
- * @date   19 April 2015
+ * @file                  Temperature_alert.c
+ * @author                Sridhar Pavithrapu
+ * @date                  15 March 2018
+ * @original author       Derek Molloy
+ * @original date         19 April 2015
  * @brief  A kernel module for controlling a GPIO LED/button pair. The device mounts devices via
  * sysfs /sys/class/gpio/gpio115 and gpio49. Therefore, this test LKM circuit assumes that an LED
  * is attached to GPIO 49 which is on P9_23 and the button is attached to GPIO 115 on P9_27. There
  * is no requirement for a custom overlay, as the pins are in their default mux mode states.
  * @see http://www.derekmolloy.ie/
+
+ * Credit/Note: This code was originally developed by Derek Molloy. We have used it as reference and 
+ *              modified it to meet our requirements. Most of the code remains the same as original,
+ *              and to demonstrate code reference, we haven't modified it to look any different.
 */
 
 #include <linux/init.h>
